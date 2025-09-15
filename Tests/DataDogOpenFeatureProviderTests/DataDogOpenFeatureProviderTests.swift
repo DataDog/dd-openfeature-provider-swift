@@ -152,12 +152,12 @@ class MockDataDogClient: DataDogFlaggingClientWithDetails {
     let mockClient = MockDataDogClient()
     let provider = DataDogProvider(client: mockClient)
     
-    #expect(provider.metadata.name == "DataDog")
+    #expect(provider.metadata.name == "DataDog OpenFeature Provider")
 }
 
 @Test func testProviderFactory() async throws {
     let mockClient = MockDataDogClient()
     let provider = DataDogOpenFeatureProvider.createProvider(client: mockClient)
     
-    #expect(provider.metadata.name == "DataDog")
+    #expect(provider.metadata.name == "DataDog OpenFeature Provider")
 }
