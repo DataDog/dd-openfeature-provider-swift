@@ -14,13 +14,21 @@ public class DataDogProvider: FeatureProvider {
     }
     
     public func initialize(initialContext: EvaluationContext?) async throws {
-        // DataDog client initialization can be handled here if needed
-        // For now, we assume the client is ready to use when passed in
+        // Called when provider is first registered with OpenFeature
+        // DataDog SDK should:
+        // - Initialize network client and configuration
+        // - If initialContext provided, fetch precomputed assignments for that context
+        // - Cache assignments internally for fast lookups during evaluations
+        // - Set up any background refresh mechanisms
     }
     
     public func onContextSet(oldContext: EvaluationContext?, newContext: EvaluationContext) async throws {
-        // Handle context changes if DataDog client supports context switching
-        // This might involve updating user targeting or other context-dependent operations
+        // Called whenever OpenFeature application sets a new evaluation context
+        // DataDog SDK should:
+        // - Extract targetingKey and attributes from newContext
+        // - Make API call to fetch fresh precomputed assignments for new context
+        // - Update internal cache with new assignments (invalidate old ones)
+        // - Subsequent flag evaluations will use these new cached assignments
     }
     
     public func getBooleanEvaluation(key: String, defaultValue: Bool, context: EvaluationContext?) throws -> ProviderEvaluation<Bool> {
