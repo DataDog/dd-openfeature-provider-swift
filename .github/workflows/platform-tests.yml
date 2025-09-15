@@ -1,0 +1,48 @@
+name: Platform Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-platforms:
+    name: Test ${{ matrix.platform }}
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        platform:
+          - 'iOS Simulator,name=iPhone 15,OS=latest'
+          - 'macOS,arch=x86_64'
+          - 'macOS,arch=arm64'
+          - 'watchOS Simulator,name=Apple Watch Series 9 (45mm),OS=latest'
+          - 'tvOS Simulator,name=Apple TV,OS=latest'
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Select Xcode version
+      run: sudo xcode-select -s /Applications/Xcode_15.0.app/Contents/Developer
+    
+    - name: Cache Swift Package Manager
+      uses: actions/cache@v3
+      with:
+        path: .build
+        key: ${{ runner.os }}-spm-${{ matrix.platform }}-${{ hashFiles('**/Package.resolved') }}
+        restore-keys: |
+          ${{ runner.os }}-spm-${{ matrix.platform }}-
+    
+    - name: Build for ${{ matrix.platform }}
+      run: |
+        xcodebuild -scheme DataDogOpenFeatureProvider \
+          -destination "platform=${{ matrix.platform }}" \
+          build
+    
+    - name: Test on ${{ matrix.platform }}
+      run: |
+        xcodebuild -scheme DataDogOpenFeatureProvider \
+          -destination "platform=${{ matrix.platform }}" \
+          test
+      continue-on-error: ${{ contains(matrix.platform, 'watchOS') || contains(matrix.platform, 'tvOS') }}
