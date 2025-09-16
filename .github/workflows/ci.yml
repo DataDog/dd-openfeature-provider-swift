@@ -58,7 +58,7 @@ jobs:
           ${{ runner.os }}-spm-ios-
     
     - name: Build for iOS
-      run: xcodebuild -scheme DataDogOpenFeatureProvider -destination "platform=iOS Simulator,name=iPhone 15,OS=latest" build
+      run: xcodebuild -scheme DataDogOpenFeatureProvider -destination "platform=iOS Simulator,name=iPhone 16,OS=latest" build
     
     - name: Test on iOS
-      run: xcodebuild -scheme DataDogOpenFeatureProvider -destination "platform=iOS Simulator,name=iPhone 15,OS=latest" test
+      run: xcodebuild -scheme DataDogOpenFeatureProvider -destination "platform=iOS Simulator,name=iPhone 16,OS=latest" test

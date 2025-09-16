@@ -16,10 +16,10 @@ jobs:
     strategy:
       matrix:
         platform:
-          - 'iOS Simulator,name=iPhone 15,OS=latest'
+          - 'iOS Simulator,name=iPhone 16,OS=latest'
           - 'macOS,arch=x86_64'
           - 'macOS,arch=arm64'
-          - 'watchOS Simulator,name=Apple Watch Series 9 (45mm),OS=latest'
+          - 'watchOS Simulator,name=Apple Watch Series 10 (46mm),OS=latest'
           - 'tvOS Simulator,name=Apple TV,OS=latest'
     
     steps:
