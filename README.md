@@ -2,10 +2,10 @@
 
 ## Overview
 
-This package provides a bridge between [OpenFeature](https://openfeature.dev/)'s vendor-neutral feature flag API and DataDog's flagging client, allowing applications to:
+This package provides a bridge between [OpenFeature](https://openfeature.dev/)'s vendor-neutral feature flag API and Datadog's flagging client, allowing applications to:
 
 - Use OpenFeature's standardized feature flag interface
-- Leverage DataDog's precomputed assignments services
+- Leverage Datadog's precomputed assignments services
 - Support all OpenFeature flag types: Boolean, String, Integer, Double, Object
 
 ## Requirements
@@ -32,7 +32,7 @@ Add this package to your `Package.swift` file:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/DataDog/dd-openfeature-provider-swift.git", from: "1.0.0")
+    .package(url: "https://github.com/Datadog/dd-openfeature-provider-swift.git", from: "1.0.0")
 ]
 ```
 
@@ -40,13 +40,13 @@ For development/testing purposes only, you can use the main branch:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/DataDog/dd-openfeature-provider-swift.git", branch: "main")
+    .package(url: "https://github.com/Datadog/dd-openfeature-provider-swift.git", branch: "main")
 ]
 ```
 
 Or add it through Xcode:
 1. **File** → **Add Package Dependencies**
-2. Enter: `https://github.com/DataDog/dd-openfeature-provider-swift.git`
+2. Enter: `https://github.com/Datadog/dd-openfeature-provider-swift.git`
 
 ## Development
 
@@ -54,7 +54,7 @@ Or add it through Xcode:
 
 ```bash
 # Clone the repository
-git clone https://github.com/DataDog/dd-openfeature-provider-swift.git
+git clone https://github.com/Datadog/dd-openfeature-provider-swift.git
 cd dd-openfeature-provider-swift
 
 # Build the package
@@ -68,16 +68,16 @@ swift build
 swift test
 
 # Run tests for specific platform (requires Xcode)
-xcodebuild -scheme DataDogOpenFeatureProvider -destination "platform=iOS Simulator,name=iPhone 16" test
+xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=iOS Simulator,name=iPhone 16" test
 ```
 
 ### Platform Testing
 
 ```bash
 # Test on different platforms
-xcodebuild -scheme DataDogOpenFeatureProvider -destination "platform=iOS Simulator,name=iPhone 16" build
-xcodebuild -scheme DataDogOpenFeatureProvider -destination "platform=macOS,arch=arm64" build  
-xcodebuild -scheme DataDogOpenFeatureProvider -destination "platform=tvOS Simulator,name=Apple TV" build
+xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=iOS Simulator,name=iPhone 16" build
+xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=macOS,arch=arm64" build  
+xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=tvOS Simulator,name=Apple TV" build
 ```
 
 ## Usage
@@ -86,18 +86,18 @@ xcodebuild -scheme DataDogOpenFeatureProvider -destination "platform=tvOS Simula
 
 ```swift
 import OpenFeature
-import DataDogOpenFeatureProvider
-import DataDogCore
-import DataDogFlags
+import DatadogOpenFeatureProvider
+import DatadogCore
+import DatadogFlags
 
-// 1. Initialize DataDog SDK
+// 1. Initialize Datadog SDK
 Datadog.initialize(with: configuration, trackingConsent: .granted)
 
-// 2. Get the DataDog flagging client (implements DataDogFlaggingClientWithDetails)
+// 2. Get the Datadog flagging client (implements DatadogFlaggingClientWithDetails)
 let flagsClient = FlagsClient.shared()
 
 // 3. Create and register the OpenFeature provider
-let provider = DataDogOpenFeatureProvider.createProvider(client: flagsClient)
+let provider = DatadogOpenFeatureProvider.createProvider(client: flagsClient)
 OpenFeatureAPI.shared.setProvider(provider: provider)
 
 // 4. Use OpenFeature API for flag evaluation
@@ -119,13 +119,13 @@ OpenFeatureAPI.shared.setEvaluationContext(evaluationContext: context)
 let flagValue = client.getBooleanValue(key: "premium-feature", defaultValue: false)
 ```
 
-**Note:** The DataDog flagging client that implements `DataDogFlaggingClientWithDetails` is provided by the DataDog iOS SDK. This provider package defines the interface that the DataDog SDK implements.
+**Note:** The Datadog flagging client that implements `DatadogFlaggingClientWithDetails` is provided by the Datadog iOS SDK. This provider package defines the interface that the Datadog SDK implements.
 
 ## Architecture
 
 ```
 ┌────────────────-─┐    ┌─────────────────────┐    ┌─────────────-────┐
-│ OpenFeature App  │────│ DataDog Provider    │────│ DataDog SDK      │
+│ OpenFeature App  │────│ Datadog Provider    │────│ Datadog SDK      │
 │                  │    │                     │    │                  │  
 │ - getBooleanValue│    │ - Protocol adapter  │    │ - Flag evaluation│
 │ - getStringValue │    │ - Context conversion│    │ - Precomputed    │
@@ -139,7 +139,7 @@ let flagValue = client.getBooleanValue(key: "premium-feature", defaultValue: fal
 
 1. **Clone and set up:**
    ```bash
-   git clone https://github.com/DataDog/dd-openfeature-provider-swift.git
+   git clone https://github.com/Datadog/dd-openfeature-provider-swift.git
    cd dd-openfeature-provider-swift
    swift package resolve
    ```

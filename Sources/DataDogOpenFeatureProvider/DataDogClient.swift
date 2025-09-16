@@ -1,6 +1,6 @@
 import Foundation
 
-public protocol DataDogFlaggingClient {
+public protocol DatadogFlaggingClient {
     func getBooleanValue(key: String, defaultValue: Bool) -> Bool
     func getBooleanValue(key: String, defaultValue: Bool, options: [String: Any]?) -> Bool
     
@@ -17,7 +17,7 @@ public protocol DataDogFlaggingClient {
     func getObjectValue(key: String, defaultValue: [String: Any], options: [String: Any]?) -> [String: Any]
 }
 
-public struct DataDogFlaggingDetails<T> {
+public struct DatadogFlaggingDetails<T> {
     public let value: T
     public let variant: String?
     public let reason: String?
@@ -31,19 +31,19 @@ public struct DataDogFlaggingDetails<T> {
     }
 }
 
-public protocol DataDogFlaggingClientWithDetails: DataDogFlaggingClient {
-    func getBooleanDetails(key: String, defaultValue: Bool) -> DataDogFlaggingDetails<Bool>
-    func getBooleanDetails(key: String, defaultValue: Bool, options: [String: Any]?) -> DataDogFlaggingDetails<Bool>
+public protocol DatadogFlaggingClientWithDetails: DatadogFlaggingClient {
+    func getBooleanDetails(key: String, defaultValue: Bool) -> DatadogFlaggingDetails<Bool>
+    func getBooleanDetails(key: String, defaultValue: Bool, options: [String: Any]?) -> DatadogFlaggingDetails<Bool>
     
-    func getStringDetails(key: String, defaultValue: String) -> DataDogFlaggingDetails<String>
-    func getStringDetails(key: String, defaultValue: String, options: [String: Any]?) -> DataDogFlaggingDetails<String>
+    func getStringDetails(key: String, defaultValue: String) -> DatadogFlaggingDetails<String>
+    func getStringDetails(key: String, defaultValue: String, options: [String: Any]?) -> DatadogFlaggingDetails<String>
     
-    func getIntegerDetails(key: String, defaultValue: Int64) -> DataDogFlaggingDetails<Int64>
-    func getIntegerDetails(key: String, defaultValue: Int64, options: [String: Any]?) -> DataDogFlaggingDetails<Int64>
+    func getIntegerDetails(key: String, defaultValue: Int64) -> DatadogFlaggingDetails<Int64>
+    func getIntegerDetails(key: String, defaultValue: Int64, options: [String: Any]?) -> DatadogFlaggingDetails<Int64>
     
-    func getDoubleDetails(key: String, defaultValue: Double) -> DataDogFlaggingDetails<Double>
-    func getDoubleDetails(key: String, defaultValue: Double, options: [String: Any]?) -> DataDogFlaggingDetails<Double>
+    func getDoubleDetails(key: String, defaultValue: Double) -> DatadogFlaggingDetails<Double>
+    func getDoubleDetails(key: String, defaultValue: Double, options: [String: Any]?) -> DatadogFlaggingDetails<Double>
     
-    func getObjectDetails(key: String, defaultValue: [String: Any]) -> DataDogFlaggingDetails<[String: Any]>
-    func getObjectDetails(key: String, defaultValue: [String: Any], options: [String: Any]?) -> DataDogFlaggingDetails<[String: Any]>
+    func getObjectDetails(key: String, defaultValue: [String: Any]) -> DatadogFlaggingDetails<[String: Any]>
+    func getObjectDetails(key: String, defaultValue: [String: Any], options: [String: Any]?) -> DatadogFlaggingDetails<[String: Any]>
 }

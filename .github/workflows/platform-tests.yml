@@ -36,13 +36,13 @@ jobs:
     
     - name: Build for ${{ matrix.platform }}
       run: |
-        xcodebuild -scheme DataDogOpenFeatureProvider \
+        xcodebuild -scheme DatadogOpenFeatureProvider \
           -destination "platform=${{ matrix.platform }}" \
           build
     
     - name: Test on ${{ matrix.platform }}
       run: |
-        xcodebuild -scheme DataDogOpenFeatureProvider \
+        xcodebuild -scheme DatadogOpenFeatureProvider \
           -destination "platform=${{ matrix.platform }}" \
           test
       continue-on-error: ${{ contains(matrix.platform, 'watchOS') || contains(matrix.platform, 'tvOS') }}

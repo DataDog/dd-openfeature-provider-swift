@@ -4,7 +4,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "DataDogOpenFeatureProvider",
+    name: "DatadogOpenFeatureProvider",
     platforms: [
         .iOS(.v14),
         .macOS(.v11),
@@ -13,21 +13,21 @@ let package = Package(
     ],
     products: [
         .library(
-            name: "DataDogOpenFeatureProvider",
-            targets: ["DataDogOpenFeatureProvider"]),
+            name: "DatadogOpenFeatureProvider",
+            targets: ["DatadogOpenFeatureProvider"]),
     ],
     dependencies: [
         .package(url: "https://github.com/open-feature/swift-sdk.git", from: "0.1.0")
     ],
     targets: [
         .target(
-            name: "DataDogOpenFeatureProvider",
+            name: "DatadogOpenFeatureProvider",
             dependencies: [
                 .product(name: "OpenFeature", package: "swift-sdk")
             ]),
         .testTarget(
-            name: "DataDogOpenFeatureProviderTests",
-            dependencies: ["DataDogOpenFeatureProvider"]
+            name: "DatadogOpenFeatureProviderTests",
+            dependencies: ["DatadogOpenFeatureProvider"]
         ),
     ]
 )

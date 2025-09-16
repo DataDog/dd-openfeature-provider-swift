@@ -2,20 +2,20 @@ import Foundation
 import OpenFeature
 import Combine
 
-public class DataDogProvider: FeatureProvider {
+public class DatadogProvider: FeatureProvider {
     public let hooks: [any Hook] = []
     public let metadata: ProviderMetadata
     
-    private let client: DataDogFlaggingClientWithDetails
+    private let client: DatadogFlaggingClientWithDetails
     
-    public init(client: DataDogFlaggingClientWithDetails) {
+    public init(client: DatadogFlaggingClientWithDetails) {
         self.client = client
-        self.metadata = DataDogProviderMetadata()
+        self.metadata = DatadogProviderMetadata()
     }
     
     public func initialize(initialContext: EvaluationContext?) async throws {
         // Called when provider is first registered with OpenFeature
-        // DataDog SDK should:
+        // Datadog SDK should:
         // - Initialize network client and configuration
         // - If initialContext provided, fetch precomputed assignments for that context
         // - Cache assignments internally for fast lookups during evaluations
@@ -24,7 +24,7 @@ public class DataDogProvider: FeatureProvider {
     
     public func onContextSet(oldContext: EvaluationContext?, newContext: EvaluationContext) async throws {
         // Called whenever OpenFeature application sets a new evaluation context
-        // DataDog SDK should:
+        // Datadog SDK should:
         // - Extract targetingKey and attributes from newContext
         // - Make API call to fetch fresh precomputed assignments for new context
         // - Update internal cache with new assignments (invalidate old ones)
@@ -202,14 +202,14 @@ public class DataDogProvider: FeatureProvider {
     }
 }
 
-struct DataDogProviderMetadata: ProviderMetadata {
-    let name: String? = "DataDog OpenFeature Provider"
+struct DatadogProviderMetadata: ProviderMetadata {
+    let name: String? = "Datadog OpenFeature Provider"
 }
 
-extension DataDogProvider: EventPublisher {
+extension DatadogProvider: EventPublisher {
     public func observe() -> AnyPublisher<ProviderEvent?, Never> {
         // For now, return an empty publisher
-        // This should be implemented when DataDog client supports events
+        // This should be implemented when Datadog client supports events
         return Empty<ProviderEvent?, Never>().eraseToAnyPublisher()
     }
 }
