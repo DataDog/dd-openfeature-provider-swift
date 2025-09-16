@@ -5,7 +5,6 @@
 This package provides a bridge between [OpenFeature](https://openfeature.dev/)'s vendor-neutral feature flag API and DataDog's flagging client, allowing applications to:
 
 - Use OpenFeature's standardized feature flag interface
-- Switch between feature flag providers with minimal code changes  
 - Leverage DataDog's precomputed assignments services
 - Support all OpenFeature flag types: Boolean, String, Integer, Double, Object
 
@@ -115,13 +114,13 @@ let flagValue = client.getBooleanValue(key: "premium-feature", defaultValue: fal
 ## Architecture
 
 ```
-┌─────────────────┐    ┌─────────────────────┐    ┌─────────────────┐
-│ OpenFeature App │────│ DataDog Provider    │────│ DataDog SDK     │
-│                 │    │                     │    │                 │  
+┌────────────────-─┐    ┌─────────────────────┐    ┌─────────────-────┐
+│ OpenFeature App  │────│ DataDog Provider    │────│ DataDog SDK      │
+│                  │    │                     │    │                  │  
 │ - getBooleanValue│    │ - Protocol adapter  │    │ - Flag evaluation│
-│ - getStringValue │    │ - Context conversion│    │ - Precomputed   │
-│ - setContext     │    │ - Value mapping     │    │   assignments   │
-└─────────────────┘    └─────────────────────┘    └─────────────────┘
+│ - getStringValue │    │ - Context conversion│    │ - Precomputed    │
+│ - setContext     │    │ - Value mapping     │    │   assignments    │
+└────────────────-─┘    └─────────────────────┘    └────────────────-─┘
 ```
 
 ## Contributing
