@@ -1,6 +1,6 @@
 import Foundation
 
-@_exported import OpenFeature
+import OpenFeature
 
 public struct DatadogOpenFeatureProvider {
     public static func createProvider(client: DatadogFlaggingClientWithDetails) -> FeatureProvider {
