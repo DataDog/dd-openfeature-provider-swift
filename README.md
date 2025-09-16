@@ -26,11 +26,21 @@ This package provides a bridge between [OpenFeature](https://openfeature.dev/)'s
 
 ### Swift Package Manager
 
+⚠️ **This package is currently in development and not yet ready for production use.**
+
 Add this package to your `Package.swift` file:
 
 ```swift
 dependencies: [
     .package(url: "https://github.com/DataDog/dd-openfeature-provider-swift.git", from: "1.0.0")
+]
+```
+
+For development/testing purposes only, you can use the main branch:
+
+```swift
+dependencies: [
+    .package(url: "https://github.com/DataDog/dd-openfeature-provider-swift.git", branch: "main")
 ]
 ```
 
