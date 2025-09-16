@@ -11,7 +11,7 @@ This package provides a bridge between [OpenFeature](https://openfeature.dev/)'s
 ## Requirements
 
 - **Xcode 15.0+**
-- **Swift 5.5+**
+- **Swift 5.9+**
 - **iOS 14.0+ / macOS 11.0+ / watchOS 7.0+ / tvOS 14.0+**
 
 ## Installation
