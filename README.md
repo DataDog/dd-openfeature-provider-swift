@@ -160,26 +160,37 @@ let testProvider = DatadogOpenFeatureProvider.createProvider(flagsClient: mockCl
 ## Architecture
 
 ```
-┌─────────────────┐    ┌──────────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│ OpenFeature App │────│ DatadogProvider      │────│ DatadogFlags     │────│ Datadog Backend │
-│                 │    │                      │    │ Adapter          │    │                 │
-│ - getBooleanValue│    │ - Lifecycle mgmt     │    │                  │    │ - Flag configs  │
-│ - getStringValue│    │ - Context conversion │    │ - Type mapping   │    │ - User targeting│
-│ - setContext    │    │ - Async operations   │    │ - Error handling │    │ - A/B testing   │
-└─────────────────┘    └──────────────────────┘    └──────────────────┘    └─────────────────┘
-                                │                            │
-                                └────────────────────────────┘
-                                   Real DatadogFlags SDK
-                                   (dd-sdk-ios/DatadogFlags)
+┌─────────────────-┐    ┌──────────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│ OpenFeature App  │────│ DatadogProvider      │────│ DatadogFlags     │────│ Datadog Backend │
+│                  │    │                      │    │ Adapter          │    │                 │
+│ - getBooleanValue│    │ - Lifecycle mgmt     │    │ - Type mapping   │    │ - Flag configs  │
+│ - getStringValue │    │ - Context conversion │    │ - Error handling │    │ - User targeting│
+│ - setContext     │    │ - Async operations   │    │ - Protocol bridge│    │ - A/B testing   │
+└─────────────────-┘    └──────────────────────┘    └──────────────────┘    └─────────────────┘
+                                                            │
+                                                            ▼
+                                                    ┌─────────────────┐
+                                                    │ DatadogFlags    │
+                                                    │ SDK Client      │
+                                                    │ (dd-sdk-ios)    │
+                                                    └─────────────────┘
 ```
 
 ### Key Components
 
-- **DatadogProvider**: Main OpenFeature provider implementation
-- **DatadogFlagsAdapter**: Bridges OpenFeature protocols with DatadogFlags SDK
-- **Real Integration**: Uses actual DatadogFlags client for production-ready flag evaluation
-- **Type Safety**: Handles conversions between OpenFeature and DatadogFlags type systems
-- **Async Support**: Proper handling of context updates and initialization
+- **OpenFeature App**: Your application using OpenFeature's standard API
+- **DatadogProvider**: Main OpenFeature provider implementation that handles lifecycle and context management
+- **DatadogFlags Adapter**: Bridge layer that converts between OpenFeature and DatadogFlags protocols/types
+- **DatadogFlags SDK Client**: The actual Datadog SDK from dd-sdk-ios that communicates with Datadog's backend
+- **Datadog Backend**: Datadog's service that serves flag configurations and handles targeting
+
+### Data Flow
+
+1. App calls OpenFeature API (e.g., `getBooleanValue`)
+2. DatadogProvider receives the call and converts OpenFeature context
+3. DatadogFlagsAdapter maps OpenFeature types to DatadogFlags types
+4. DatadogFlags SDK Client makes the actual flag evaluation
+5. Response flows back through the adapter (with type conversion) to the app
 
 ## Contributing
 
