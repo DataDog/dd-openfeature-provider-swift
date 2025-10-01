@@ -102,7 +102,7 @@ let flagsConfig = Flags.Configuration()
 Flags.enable(with: flagsConfig)
 
 // 2. Create the DatadogFlags client
-let flagsClient = FlagsClient.create(in: Datadog.coreInstance)
+let flagsClient = FlagsClient.create()
 
 // 3. Create user context for targeting
 let context = ImmutableContext(
@@ -138,25 +138,6 @@ let client = OpenFeatureAPI.shared.getClient()
 let flagValue = client.getBooleanValue(key: "my-feature-flag", defaultValue: false)
 ```
 
-### Advanced Usage
-
-```swift
-// For more control, you can create the adapter directly
-let flagsClient = FlagsClient.create(in: Datadog.coreInstance)
-let adapter = DatadogFlagsAdapter(flagsClient: flagsClient)
-let provider = DatadogProvider(client: adapter)
-
-// Or use the original interface if you have a custom client implementation
-let customClient: DatadogFlaggingClientWithDetails = MyCustomClient()
-let provider = DatadogOpenFeatureProvider.createProvider(client: customClient)
-
-// You can also pass any FlagsClientProtocol implementation
-let mockClient: FlagsClientProtocol = MockFlagsClient()
-let testProvider = DatadogOpenFeatureProvider.createProvider(flagsClient: mockClient)
-```
-
-**Note:** This provider now integrates directly with the DatadogFlags SDK from dd-sdk-ios, providing full functionality including context management, async operations, and comprehensive flag evaluation.
-
 ## Architecture
 
 ```
@@ -181,7 +162,7 @@ let testProvider = DatadogOpenFeatureProvider.createProvider(flagsClient: mockCl
 - **OpenFeature App**: Your application using OpenFeature's standard API
 - **DatadogProvider**: Main OpenFeature provider implementation that handles lifecycle and context management
 - **DatadogFlags Adapter**: Bridge layer that converts between OpenFeature and DatadogFlags protocols/types
-- **DatadogFlags SDK Client**: The actual Datadog SDK from dd-sdk-ios that communicates with Datadog's backend
+- **DatadogFlags SDK Client**: The client from dd-sdk-ios that communicates with Datadog's backend
 - **Datadog Backend**: Datadog's service that serves flag configurations and handles targeting
 
 ### Data Flow

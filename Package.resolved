@@ -5,8 +5,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/DataDog/dd-sdk-ios.git",
       "state" : {
-        "branch" : "gonzalezreal/FFL-1016/named-client-support",
-        "revision" : "5ca00579d6a90723b67c42b9c52d7a20f98149f9"
+        "branch" : "feature/flags",
+        "revision" : "bdeb878f2c9df619906968dc68b8c41aab3c4d5f"
       }
     },
     {

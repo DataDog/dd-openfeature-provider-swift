@@ -25,6 +25,7 @@ public class DatadogFlagsAdapter: DatadogFlaggingClientWithDetails {
     }
     
     public func getStringValue(key: String, defaultValue: String, options: [String: Any]?) -> String {
+        // Note: DatadogFlags doesn't support per-evaluation context, so we ignore options here
         return flagsClient.getStringValue(key: key, defaultValue: defaultValue)
     }
     
@@ -35,6 +36,7 @@ public class DatadogFlagsAdapter: DatadogFlaggingClientWithDetails {
     }
     
     public func getIntegerValue(key: String, defaultValue: Int64, options: [String: Any]?) -> Int64 {
+        // Note: DatadogFlags doesn't support per-evaluation context, so we ignore options here
         let intValue = Int(defaultValue)
         let result = flagsClient.getIntegerValue(key: key, defaultValue: intValue)
         return Int64(result)
@@ -45,6 +47,7 @@ public class DatadogFlagsAdapter: DatadogFlaggingClientWithDetails {
     }
     
     public func getDoubleValue(key: String, defaultValue: Double, options: [String: Any]?) -> Double {
+        // Note: DatadogFlags doesn't support per-evaluation context, so we ignore options here
         return flagsClient.getDoubleValue(key: key, defaultValue: defaultValue)
     }
     
@@ -55,6 +58,7 @@ public class DatadogFlagsAdapter: DatadogFlaggingClientWithDetails {
     }
     
     public func getObjectValue(key: String, defaultValue: [String: Any], options: [String: Any]?) -> [String: Any] {
+        // Note: DatadogFlags doesn't support per-evaluation context, so we ignore options here
         let anyValue = convertDictToAnyValue(defaultValue)
         let result = flagsClient.getObjectValue(key: key, defaultValue: anyValue)
         return convertAnyValueToDict(result)
@@ -73,6 +77,7 @@ public class DatadogFlagsAdapter: DatadogFlaggingClientWithDetails {
     }
     
     public func getBooleanDetails(key: String, defaultValue: Bool, options: [String: Any]?) -> DatadogFlaggingDetails<Bool> {
+        // Note: DatadogFlags doesn't support per-evaluation context, so we ignore options here
         let details = flagsClient.getBooleanDetails(key: key, defaultValue: defaultValue)
         return DatadogFlaggingDetails(
             value: details.value,
@@ -93,6 +98,7 @@ public class DatadogFlagsAdapter: DatadogFlaggingClientWithDetails {
     }
     
     public func getStringDetails(key: String, defaultValue: String, options: [String: Any]?) -> DatadogFlaggingDetails<String> {
+        // Note: DatadogFlags doesn't support per-evaluation context, so we ignore options here
         let details = flagsClient.getStringDetails(key: key, defaultValue: defaultValue)
         return DatadogFlaggingDetails(
             value: details.value,
@@ -114,6 +120,7 @@ public class DatadogFlagsAdapter: DatadogFlaggingClientWithDetails {
     }
     
     public func getIntegerDetails(key: String, defaultValue: Int64, options: [String: Any]?) -> DatadogFlaggingDetails<Int64> {
+        // Note: DatadogFlags doesn't support per-evaluation context, so we ignore options here
         let intValue = Int(defaultValue)
         let details = flagsClient.getIntegerDetails(key: key, defaultValue: intValue)
         return DatadogFlaggingDetails(
@@ -135,6 +142,7 @@ public class DatadogFlagsAdapter: DatadogFlaggingClientWithDetails {
     }
     
     public func getDoubleDetails(key: String, defaultValue: Double, options: [String: Any]?) -> DatadogFlaggingDetails<Double> {
+        // Note: DatadogFlags doesn't support per-evaluation context, so we ignore options here
         let details = flagsClient.getDoubleDetails(key: key, defaultValue: defaultValue)
         return DatadogFlaggingDetails(
             value: details.value,
@@ -156,6 +164,7 @@ public class DatadogFlagsAdapter: DatadogFlaggingClientWithDetails {
     }
     
     public func getObjectDetails(key: String, defaultValue: [String: Any], options: [String: Any]?) -> DatadogFlaggingDetails<[String: Any]> {
+        // Note: DatadogFlags doesn't support per-evaluation context, so we ignore options here
         let anyValue = convertDictToAnyValue(defaultValue)
         let details = flagsClient.getObjectDetails(key: key, defaultValue: anyValue)
         return DatadogFlaggingDetails(
