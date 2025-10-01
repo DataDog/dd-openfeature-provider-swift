@@ -1,34 +1,68 @@
 import Foundation
 import OpenFeature
 import Combine
+import DatadogFlags
 
 public class DatadogProvider: FeatureProvider {
     public let hooks: [any Hook] = []
     public let metadata: ProviderMetadata
     
     private let client: DatadogFlaggingClientWithDetails
+    private let flagsClient: FlagsClientProtocol?
     
     public init(client: DatadogFlaggingClientWithDetails) {
         self.client = client
+        if let adapter = client as? DatadogFlagsAdapter {
+            self.flagsClient = adapter.flagsClient
+        } else {
+            self.flagsClient = nil
+        }
         self.metadata = DatadogProviderMetadata()
     }
     
+    public convenience init(flagsClient: FlagsClientProtocol) {
+        let adapter = DatadogFlagsAdapter(flagsClient: flagsClient)
+        self.init(client: adapter)
+    }
+    
     public func initialize(initialContext: EvaluationContext?) async throws {
-        // Called when provider is first registered with OpenFeature
-        // Datadog SDK should:
-        // - Initialize network client and configuration
-        // - If initialContext provided, fetch precomputed assignments for that context
-        // - Cache assignments internally for fast lookups during evaluations
-        // - Set up any background refresh mechanisms
+        guard let flagsClient = flagsClient else {
+            return
+        }
+        
+        if let context = initialContext {
+            let ddContext = convertOpenFeatureContextToDatadogContext(context)
+            // Set the context using completion handler
+            return try await withCheckedThrowingContinuation { continuation in
+                flagsClient.setEvaluationContext(ddContext) { result in
+                    switch result {
+                    case .success:
+                        continuation.resume()
+                    case .failure(let error):
+                        continuation.resume(throwing: error)
+                    }
+                }
+            }
+        }
     }
     
     public func onContextSet(oldContext: EvaluationContext?, newContext: EvaluationContext) async throws {
-        // Called whenever OpenFeature application sets a new evaluation context
-        // Datadog SDK should:
-        // - Extract targetingKey and attributes from newContext
-        // - Make API call to fetch fresh precomputed assignments for new context
-        // - Update internal cache with new assignments (invalidate old ones)
-        // - Subsequent flag evaluations will use these new cached assignments
+        guard let flagsClient = flagsClient else {
+            return
+        }
+        
+        let ddContext = convertOpenFeatureContextToDatadogContext(newContext)
+        // Set the context using completion handler
+        return try await withCheckedThrowingContinuation { continuation in
+            flagsClient.setEvaluationContext(ddContext) { result in
+                switch result {
+                case .success:
+                    continuation.resume()
+                case .failure(let error):
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
     }
     
     public func getBooleanEvaluation(key: String, defaultValue: Bool, context: EvaluationContext?) throws -> ProviderEvaluation<Bool> {
@@ -105,6 +139,75 @@ public class DatadogProvider: FeatureProvider {
         }
         
         return options.isEmpty ? nil : options
+    }
+    
+    private func convertOpenFeatureContextToDatadogContext(_ context: EvaluationContext) -> FlagsEvaluationContext {
+        let targetingKey = context.getTargetingKey()
+        
+        var attributes: [String: String] = [:]
+        for (key, value) in context.asMap() {
+            // DatadogFlags only supports String attributes
+            attributes[key] = convertValueToString(value)
+        }
+        
+        return FlagsEvaluationContext(targetingKey: targetingKey, attributes: attributes)
+    }
+    
+    private func convertValueToString(_ value: Value) -> String {
+        switch value {
+        case .boolean(let bool):
+            return bool.description
+        case .string(let string):
+            return string
+        case .integer(let int):
+            return int.description
+        case .double(let double):
+            return double.description
+        case .date(let date):
+            return date.description
+        case .structure(let structure):
+            // Convert to JSON string for complex types
+            if let data = try? JSONSerialization.data(withJSONObject: convertStructureToDict(structure)),
+               let jsonString = String(data: data, encoding: .utf8) {
+                return jsonString
+            }
+            return structure.description
+        case .list(let list):
+            // Convert to JSON string for complex types
+            let arrayDict = list.map { convertValueToAny($0) }
+            if let data = try? JSONSerialization.data(withJSONObject: arrayDict),
+               let jsonString = String(data: data, encoding: .utf8) {
+                return jsonString
+            }
+            return list.description
+        case .null:
+            return ""
+        }
+    }
+    
+    private func convertStructureToDict(_ structure: [String: Value]) -> [String: Any] {
+        return structure.mapValues { convertValueToAny($0) }
+    }
+    
+    private func convertValueToAny(_ value: Value) -> Any {
+        switch value {
+        case .boolean(let bool):
+            return bool
+        case .string(let string):
+            return string
+        case .integer(let int):
+            return int
+        case .double(let double):
+            return double
+        case .date(let date):
+            return date
+        case .structure(let structure):
+            return structure.mapValues { convertValueToAny($0) }
+        case .list(let list):
+            return list.map { convertValueToAny($0) }
+        case .null:
+            return NSNull()
+        }
     }
     
     private func valueToDict(_ value: Value) -> [String: Any] {

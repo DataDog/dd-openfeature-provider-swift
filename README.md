@@ -12,7 +12,7 @@ This package provides a bridge between [OpenFeature](https://openfeature.dev/)'s
 
 - **Xcode 15.0+**
 - **Swift 5.9+**
-- **iOS 14.0+ / macOS 11.0+ / watchOS 7.0+ / tvOS 14.0+**
+- **iOS 14.0+ / macOS 12.0+ / watchOS 7.0+ / tvOS 14.0+**
 
 ## Installation
 
@@ -91,11 +91,20 @@ import DatadogCore
 import DatadogFlags
 
 // 1. Initialize Datadog SDK and enable flags
-Datadog.initialize(with: config, trackingConsent: .granted)
-Flags.enable(with: flagsConfig)
-let ddFlagsClient = FlagsClient.create(with: flagsClientConfig)
+let config = Datadog.Configuration.builderUsing(
+    clientToken: "YOUR_CLIENT_TOKEN",
+    environment: "production"
+).build()
 
-// 2. Create user context for targeting
+Datadog.initialize(with: config, trackingConsent: .granted)
+
+let flagsConfig = Flags.Configuration()
+Flags.enable(with: flagsConfig)
+
+// 2. Create the DatadogFlags client
+let flagsClient = FlagsClient.create(in: Datadog.coreInstance)
+
+// 3. Create user context for targeting
 let context = ImmutableContext(
     targetingKey: "user123",
     structure: ImmutableStructure(attributes: [
@@ -104,11 +113,11 @@ let context = ImmutableContext(
     ])
 )
 
-// 3. Create and register the OpenFeature provider
-let provider = DatadogOpenFeatureProvider.createProvider(client: ddFlagsClient)
+// 4. Create and register the OpenFeature provider using the real DatadogFlags client
+let provider = DatadogOpenFeatureProvider.createProvider(flagsClient: flagsClient)
 await OpenFeatureAPI.shared.setProviderAndWait(provider: provider, initialContext: context)
 
-// 4. Get OpenFeature client and evaluate flags
+// 5. Get OpenFeature client and evaluate flags
 let client = OpenFeatureAPI.shared.getClient()
 let flagValue = client.getBooleanValue(key: "my-feature-flag", defaultValue: false)
 ```
@@ -129,19 +138,48 @@ let client = OpenFeatureAPI.shared.getClient()
 let flagValue = client.getBooleanValue(key: "my-feature-flag", defaultValue: false)
 ```
 
-**Note:** The Datadog flagging client that implements `DatadogFlaggingClientWithDetails` is provided by the Datadog iOS SDK. This provider package defines the interface that the Datadog SDK implements.
+### Advanced Usage
+
+```swift
+// For more control, you can create the adapter directly
+let flagsClient = FlagsClient.create(in: Datadog.coreInstance)
+let adapter = DatadogFlagsAdapter(flagsClient: flagsClient)
+let provider = DatadogProvider(client: adapter)
+
+// Or use the original interface if you have a custom client implementation
+let customClient: DatadogFlaggingClientWithDetails = MyCustomClient()
+let provider = DatadogOpenFeatureProvider.createProvider(client: customClient)
+
+// You can also pass any FlagsClientProtocol implementation
+let mockClient: FlagsClientProtocol = MockFlagsClient()
+let testProvider = DatadogOpenFeatureProvider.createProvider(flagsClient: mockClient)
+```
+
+**Note:** This provider now integrates directly with the DatadogFlags SDK from dd-sdk-ios, providing full functionality including context management, async operations, and comprehensive flag evaluation.
 
 ## Architecture
 
 ```
-┌────────────────-─┐    ┌─────────────────────┐    ┌─────────────-────┐
-│ OpenFeature App  │────│ Datadog Provider    │────│ Datadog SDK      │
-│                  │    │                     │    │                  │  
-│ - getBooleanValue│    │ - Protocol adapter  │    │ - Flag evaluation│
-│ - getStringValue │    │ - Context conversion│    │ - Precomputed    │
-│ - setContext     │    │ - Value mapping     │    │   assignments    │
-└────────────────-─┘    └─────────────────────┘    └────────────────-─┘
+┌─────────────────┐    ┌──────────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│ OpenFeature App │────│ DatadogProvider      │────│ DatadogFlags     │────│ Datadog Backend │
+│                 │    │                      │    │ Adapter          │    │                 │
+│ - getBooleanValue│    │ - Lifecycle mgmt     │    │                  │    │ - Flag configs  │
+│ - getStringValue│    │ - Context conversion │    │ - Type mapping   │    │ - User targeting│
+│ - setContext    │    │ - Async operations   │    │ - Error handling │    │ - A/B testing   │
+└─────────────────┘    └──────────────────────┘    └──────────────────┘    └─────────────────┘
+                                │                            │
+                                └────────────────────────────┘
+                                   Real DatadogFlags SDK
+                                   (dd-sdk-ios/DatadogFlags)
 ```
+
+### Key Components
+
+- **DatadogProvider**: Main OpenFeature provider implementation
+- **DatadogFlagsAdapter**: Bridges OpenFeature protocols with DatadogFlags SDK
+- **Real Integration**: Uses actual DatadogFlags client for production-ready flag evaluation
+- **Type Safety**: Handles conversions between OpenFeature and DatadogFlags type systems
+- **Async Support**: Proper handling of context updates and initialization
 
 ## Contributing
 

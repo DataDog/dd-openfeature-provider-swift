@@ -1,16 +1,41 @@
 {
-  "object": {
-    "pins": [
-      {
-        "package": "OpenFeature",
-        "repositoryURL": "https://github.com/open-feature/swift-sdk.git",
-        "state": {
-          "branch": null,
-          "revision": "8455efe44541420cfb5ffcf6d95422361e8209a8",
-          "version": "0.4.0"
-        }
+  "pins" : [
+    {
+      "identity" : "dd-sdk-ios",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/DataDog/dd-sdk-ios.git",
+      "state" : {
+        "branch" : "gonzalezreal/FFL-1016/named-client-support",
+        "revision" : "5ca00579d6a90723b67c42b9c52d7a20f98149f9"
       }
-    ]
-  },
-  "version": 1
+    },
+    {
+      "identity" : "opentelemetry-swift-packages",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/DataDog/opentelemetry-swift-packages.git",
+      "state" : {
+        "revision" : "4a7295600d4ebb9525a23c11586c5fdb74ae8b7e",
+        "version" : "1.13.1"
+      }
+    },
+    {
+      "identity" : "plcrashreporter",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/microsoft/plcrashreporter.git",
+      "state" : {
+        "revision" : "8c61e5e38e9f737dd68512ed1ea5ab081244ad65",
+        "version" : "1.12.0"
+      }
+    },
+    {
+      "identity" : "swift-sdk",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/open-feature/swift-sdk.git",
+      "state" : {
+        "revision" : "8455efe44541420cfb5ffcf6d95422361e8209a8",
+        "version" : "0.4.0"
+      }
+    }
+  ],
+  "version" : 2
 }
