@@ -19,7 +19,7 @@ public class DatadogProvider: FeatureProvider {
     public func initialize(initialContext: EvaluationContext?) async throws {
         
         if let context = initialContext {
-            let ddContext = convertOpenFeatureContextToDatadogContext(context)
+            let ddContext = FlagsEvaluationContext(context)
             // Set the context using completion handler
             return try await withCheckedThrowingContinuation { continuation in
                 flagsClient.setEvaluationContext(ddContext) { result in
@@ -36,7 +36,7 @@ public class DatadogProvider: FeatureProvider {
     
     public func onContextSet(oldContext: EvaluationContext?, newContext: EvaluationContext) async throws {
         
-        let ddContext = convertOpenFeatureContextToDatadogContext(newContext)
+        let ddContext = FlagsEvaluationContext(newContext)
         // Set the context using completion handler
         return try await withCheckedThrowingContinuation { continuation in
             flagsClient.setEvaluationContext(ddContext) { result in
@@ -126,49 +126,6 @@ public class DatadogProvider: FeatureProvider {
         return options.isEmpty ? nil : options
     }
     
-    private func convertOpenFeatureContextToDatadogContext(_ context: EvaluationContext) -> FlagsEvaluationContext {
-        let targetingKey = context.getTargetingKey()
-        
-        var attributes: [String: String] = [:]
-        for (key, value) in context.asMap() {
-            // DatadogFlags only supports String attributes
-            attributes[key] = convertValueToString(value)
-        }
-        
-        return FlagsEvaluationContext(targetingKey: targetingKey, attributes: attributes)
-    }
-    
-    private func convertValueToString(_ value: Value) -> String {
-        switch value {
-        case .boolean(let bool):
-            return bool.description
-        case .string(let string):
-            return string
-        case .integer(let int):
-            return int.description
-        case .double(let double):
-            return double.description
-        case .date(let date):
-            return date.description
-        case .structure(let structure):
-            // Convert to JSON string for complex types
-            if let data = try? JSONSerialization.data(withJSONObject: convertStructureToDict(structure)),
-               let jsonString = String(data: data, encoding: .utf8) {
-                return jsonString
-            }
-            return structure.description
-        case .list(let list):
-            // Convert to JSON string for complex types
-            let arrayDict = list.map { $0.toAny() }
-            if let data = try? JSONSerialization.data(withJSONObject: arrayDict),
-               let jsonString = String(data: data, encoding: .utf8) {
-                return jsonString
-            }
-            return list.description
-        case .null:
-            return ""
-        }
-    }
     
     private func convertStructureToDict(_ structure: [String: Value]) -> [String: Any] {
         return structure.mapValues { $0.toAny() }
@@ -283,5 +240,54 @@ extension Value {
         case .null:
             return NSNull()
         }
+    }
+    
+    /// Converts OpenFeature Value to String representation
+    func toString() -> String {
+        switch self {
+        case .boolean(let bool):
+            return bool.description
+        case .string(let string):
+            return string
+        case .integer(let int):
+            return int.description
+        case .double(let double):
+            return double.description
+        case .date(let date):
+            return date.description
+        case .structure(let structure):
+            // Convert to JSON string for complex types
+            if let data = try? JSONSerialization.data(withJSONObject: structure.mapValues { $0.toAny() }),
+               let jsonString = String(data: data, encoding: .utf8) {
+                return jsonString
+            }
+            return structure.description
+        case .list(let list):
+            // Convert to JSON string for complex types
+            let arrayDict = list.map { $0.toAny() }
+            if let data = try? JSONSerialization.data(withJSONObject: arrayDict),
+               let jsonString = String(data: data, encoding: .utf8) {
+                return jsonString
+            }
+            return list.description
+        case .null:
+            return ""
+        }
+    }
+}
+
+// MARK: - DatadogFlags Context Extensions
+extension FlagsEvaluationContext {
+    /// Creates a FlagsEvaluationContext from an OpenFeature EvaluationContext
+    init(_ context: EvaluationContext) {
+        let targetingKey = context.getTargetingKey()
+        
+        var attributes: [String: String] = [:]
+        for (key, value) in context.asMap() {
+            // DatadogFlags only supports String attributes
+            attributes[key] = value.toString()
+        }
+        
+        self.init(targetingKey: targetingKey, attributes: attributes)
     }
 }
