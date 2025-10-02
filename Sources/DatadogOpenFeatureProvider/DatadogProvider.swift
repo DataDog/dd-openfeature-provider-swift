@@ -120,7 +120,7 @@ public class DatadogProvider: FeatureProvider {
         options["targetingKey"] = targetingKey
         
         for (key, value) in context.asMap() {
-            options[key] = valueToAny(value)
+            options[key] = value.toAny()
         }
         
         return options.isEmpty ? nil : options
@@ -159,7 +159,7 @@ public class DatadogProvider: FeatureProvider {
             return structure.description
         case .list(let list):
             // Convert to JSON string for complex types
-            let arrayDict = list.map { convertValueToAny($0) }
+            let arrayDict = list.map { $0.toAny() }
             if let data = try? JSONSerialization.data(withJSONObject: arrayDict),
                let jsonString = String(data: data, encoding: .utf8) {
                 return jsonString
@@ -171,38 +171,17 @@ public class DatadogProvider: FeatureProvider {
     }
     
     private func convertStructureToDict(_ structure: [String: Value]) -> [String: Any] {
-        return structure.mapValues { convertValueToAny($0) }
-    }
-    
-    private func convertValueToAny(_ value: Value) -> Any {
-        switch value {
-        case .boolean(let bool):
-            return bool
-        case .string(let string):
-            return string
-        case .integer(let int):
-            return int
-        case .double(let double):
-            return double
-        case .date(let date):
-            return date
-        case .structure(let structure):
-            return structure.mapValues { convertValueToAny($0) }
-        case .list(let list):
-            return list.map { convertValueToAny($0) }
-        case .null:
-            return NSNull()
-        }
+        return structure.mapValues { $0.toAny() }
     }
     
     private func valueToDict(_ value: Value) -> [String: Any] {
         switch value {
         case .structure(let structure):
-            return structure.mapValues { valueToAny($0) }
+            return structure.mapValues { $0.toAny() }
         case .list(let list):
-            return ["_list": list.map { valueToAny($0) }]
+            return ["_list": list.map { $0.toAny() }]
         default:
-            return ["_value": valueToAny(value)]
+            return ["_value": value.toAny()]
         }
     }
     
@@ -220,26 +199,6 @@ public class DatadogProvider: FeatureProvider {
         }
     }
     
-    private func valueToAny(_ value: Value) -> Any {
-        switch value {
-        case .boolean(let bool):
-            return bool
-        case .string(let string):
-            return string
-        case .integer(let int):
-            return int
-        case .double(let double):
-            return double
-        case .date(let date):
-            return date
-        case .structure(let structure):
-            return structure.mapValues { valueToAny($0) }
-        case .list(let list):
-            return list.map { valueToAny($0) }
-        case .null:
-            return NSNull()
-        }
-    }
     
     private func anyToValue(_ any: Any) -> Value {
         switch any {
@@ -299,5 +258,30 @@ extension DatadogProvider: EventPublisher {
         // For now, return an empty publisher
         // This should be implemented when Datadog client supports events
         return Empty<ProviderEvent?, Never>().eraseToAnyPublisher()
+    }
+}
+
+// MARK: - OpenFeature Value Extensions
+extension Value {
+    /// Converts an OpenFeature Value to Any type for interoperability
+    func toAny() -> Any {
+        switch self {
+        case .boolean(let bool):
+            return bool
+        case .string(let string):
+            return string
+        case .integer(let int):
+            return int
+        case .double(let double):
+            return double
+        case .date(let date):
+            return date
+        case .structure(let structure):
+            return structure.mapValues { $0.toAny() }
+        case .list(let list):
+            return list.map { $0.toAny() }
+        case .null:
+            return NSNull()
+        }
     }
 }
