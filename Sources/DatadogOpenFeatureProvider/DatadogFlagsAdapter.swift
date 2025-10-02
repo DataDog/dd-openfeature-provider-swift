@@ -2,20 +2,6 @@ import Foundation
 import DatadogFlags
 import OpenFeature
 
-internal struct AdapterFlagResult<T> {
-    let value: T
-    let variant: String?
-    let reason: String?
-    let metadata: [String: Any]
-    
-    init(value: T, variant: String? = nil, reason: String? = nil, metadata: [String: Any] = [:]) {
-        self.value = value
-        self.variant = variant
-        self.reason = reason
-        self.metadata = metadata
-    }
-}
-
 
 internal class DatadogFlagsAdapter {
     let flagsClient: FlagsClientProtocol
@@ -27,55 +13,61 @@ internal class DatadogFlagsAdapter {
     
     // MARK: - Flag Evaluation Methods
     
-    internal func getBooleanDetails(key: String, defaultValue: Bool, options: [String: Any]?) -> AdapterFlagResult<Bool> {
+    internal func getBooleanDetails(key: String, defaultValue: Bool, options: [String: Any]?) -> ProviderEvaluation<Bool> {
         let details = flagsClient.getBooleanDetails(key: key, defaultValue: defaultValue)
-        return AdapterFlagResult(
+        let metadata = extractMetadata(flagKey: key, options: options)
+        return ProviderEvaluation(
             value: details.value,
+            flagMetadata: metadataToFlagMetadata(metadata),
             variant: details.variant,
-            reason: details.reason,
-            metadata: extractMetadata(flagKey: key, options: options)
+            reason: details.reason
         )
     }
     
-    internal func getStringDetails(key: String, defaultValue: String, options: [String: Any]?) -> AdapterFlagResult<String> {
+    internal func getStringDetails(key: String, defaultValue: String, options: [String: Any]?) -> ProviderEvaluation<String> {
         let details = flagsClient.getStringDetails(key: key, defaultValue: defaultValue)
-        return AdapterFlagResult(
+        let metadata = extractMetadata(flagKey: key, options: options)
+        return ProviderEvaluation(
             value: details.value,
+            flagMetadata: metadataToFlagMetadata(metadata),
             variant: details.variant,
-            reason: details.reason,
-            metadata: extractMetadata(flagKey: key, options: options)
+            reason: details.reason
         )
     }
     
-    internal func getIntegerDetails(key: String, defaultValue: Int64, options: [String: Any]?) -> AdapterFlagResult<Int64> {
+    internal func getIntegerDetails(key: String, defaultValue: Int64, options: [String: Any]?) -> ProviderEvaluation<Int64> {
         let intValue = Int(defaultValue)
         let details = flagsClient.getIntegerDetails(key: key, defaultValue: intValue)
-        return AdapterFlagResult(
+        let metadata = extractMetadata(flagKey: key, options: options)
+        return ProviderEvaluation(
             value: Int64(details.value),
+            flagMetadata: metadataToFlagMetadata(metadata),
             variant: details.variant,
-            reason: details.reason,
-            metadata: extractMetadata(flagKey: key, options: options)
+            reason: details.reason
         )
     }
     
-    internal func getDoubleDetails(key: String, defaultValue: Double, options: [String: Any]?) -> AdapterFlagResult<Double> {
+    internal func getDoubleDetails(key: String, defaultValue: Double, options: [String: Any]?) -> ProviderEvaluation<Double> {
         let details = flagsClient.getDoubleDetails(key: key, defaultValue: defaultValue)
-        return AdapterFlagResult(
+        let metadata = extractMetadata(flagKey: key, options: options)
+        return ProviderEvaluation(
             value: details.value,
+            flagMetadata: metadataToFlagMetadata(metadata),
             variant: details.variant,
-            reason: details.reason,
-            metadata: extractMetadata(flagKey: key, options: options)
+            reason: details.reason
         )
     }
     
-    internal func getObjectDetails(key: String, defaultValue: [String: Any], options: [String: Any]?) -> AdapterFlagResult<[String: Any]> {
-        let anyValue = AnyValue(defaultValue)
+    internal func getObjectDetails(key: String, defaultValue: Value, options: [String: Any]?) -> ProviderEvaluation<Value> {
+        let defaultDict = defaultValue.toDictionary()
+        let anyValue = AnyValue(defaultDict)
         let details = flagsClient.getObjectDetails(key: key, defaultValue: anyValue)
-        return AdapterFlagResult(
-            value: details.value.toDictionary(),
+        let metadata = extractMetadata(flagKey: key, options: options)
+        return ProviderEvaluation(
+            value: details.value.toValue(),
+            flagMetadata: metadataToFlagMetadata(metadata),
             variant: details.variant,
-            reason: details.reason,
-            metadata: extractMetadata(flagKey: key, options: options)
+            reason: details.reason
         )
     }
     
@@ -109,6 +101,27 @@ internal class DatadogFlagsAdapter {
         }
         
         return metadata
+    }
+    
+    // MARK: - Helper Methods
+    
+    private func metadataToFlagMetadata(_ metadata: [String: Any]) -> [String: FlagMetadataValue] {
+        return metadata.compactMapValues { value in
+            switch value {
+            case let bool as Bool:
+                return .boolean(bool)
+            case let string as String:
+                return .string(string)
+            case let int as Int:
+                return .integer(Int64(int))
+            case let int64 as Int64:
+                return .integer(int64)
+            case let double as Double:
+                return .double(double)
+            default:
+                return nil
+            }
+        }
     }
     
 }
@@ -189,6 +202,30 @@ extension AnyValue {
             return ["_list": list.map { $0.toAny() }]
         default:
             return ["_value": self.toAny()]
+        }
+    }
+    
+    /// Converts AnyValue to OpenFeature Value
+    func toValue() -> Value {
+        switch self {
+        case .bool(let bool):
+            return .boolean(bool)
+        case .string(let string):
+            return .string(string)
+        case .int(let int):
+            return .integer(Int64(int))
+        case .double(let double):
+            return .double(double)
+        case .dictionary(let structure):
+            var result: [String: Value] = [:]
+            for (key, value) in structure {
+                result[key] = value.toValue()
+            }
+            return .structure(result)
+        case .array(let list):
+            return .list(list.map { $0.toValue() })
+        case .null:
+            return .null
         }
     }
 }
