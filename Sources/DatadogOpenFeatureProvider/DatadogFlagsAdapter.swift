@@ -18,6 +18,7 @@ internal struct AdapterFlagResult<T> {
 
 internal class DatadogFlagsAdapter {
     let flagsClient: FlagsClientProtocol
+    private static let iso8601Formatter = ISO8601DateFormatter()
     
     init(flagsClient: FlagsClientProtocol) {
         self.flagsClient = flagsClient
@@ -89,8 +90,7 @@ internal class DatadogFlagsAdapter {
         metadata["provider"] = "DatadogFlags"
         
         // Add evaluation timestamp
-        let formatter = ISO8601DateFormatter()
-        metadata["evaluationTime"] = formatter.string(from: Date())
+        metadata["evaluationTime"] = Self.iso8601Formatter.string(from: Date())
         
         // Extract context information from options if available
         if let options = options {
