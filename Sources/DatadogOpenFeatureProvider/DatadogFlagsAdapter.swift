@@ -2,177 +2,112 @@ import Foundation
 import DatadogFlags
 import OpenFeature
 
-public class DatadogFlagsAdapter: DatadogFlaggingClientWithDetails {
-    public let flagsClient: FlagsClientProtocol
+internal struct AdapterFlagResult<T> {
+    let value: T
+    let variant: String?
+    let reason: String?
+    let metadata: [String: Any]
     
-    public init(flagsClient: FlagsClientProtocol) {
+    init(value: T, variant: String? = nil, reason: String? = nil, metadata: [String: Any] = [:]) {
+        self.value = value
+        self.variant = variant
+        self.reason = reason
+        self.metadata = metadata
+    }
+}
+
+internal class DatadogFlagsAdapter {
+    let flagsClient: FlagsClientProtocol
+    
+    init(flagsClient: FlagsClientProtocol) {
         self.flagsClient = flagsClient
     }
     
-    // MARK: - DatadogFlaggingClient Methods (Simple Values)
+    // MARK: - Flag Evaluation Methods
     
-    public func getBooleanValue(key: String, defaultValue: Bool) -> Bool {
-        return flagsClient.getBooleanValue(key: key, defaultValue: defaultValue)
-    }
-    
-    public func getBooleanValue(key: String, defaultValue: Bool, options: [String: Any]?) -> Bool {
-        // Note: DatadogFlags doesn't support per-evaluation context, so we ignore options here
-        return flagsClient.getBooleanValue(key: key, defaultValue: defaultValue)
-    }
-    
-    public func getStringValue(key: String, defaultValue: String) -> String {
-        return flagsClient.getStringValue(key: key, defaultValue: defaultValue)
-    }
-    
-    public func getStringValue(key: String, defaultValue: String, options: [String: Any]?) -> String {
-        // Note: DatadogFlags doesn't support per-evaluation context, so we ignore options here
-        return flagsClient.getStringValue(key: key, defaultValue: defaultValue)
-    }
-    
-    public func getIntegerValue(key: String, defaultValue: Int64) -> Int64 {
-        let intValue = Int(defaultValue)
-        let result = flagsClient.getIntegerValue(key: key, defaultValue: intValue)
-        return Int64(result)
-    }
-    
-    public func getIntegerValue(key: String, defaultValue: Int64, options: [String: Any]?) -> Int64 {
-        // Note: DatadogFlags doesn't support per-evaluation context, so we ignore options here
-        let intValue = Int(defaultValue)
-        let result = flagsClient.getIntegerValue(key: key, defaultValue: intValue)
-        return Int64(result)
-    }
-    
-    public func getDoubleValue(key: String, defaultValue: Double) -> Double {
-        return flagsClient.getDoubleValue(key: key, defaultValue: defaultValue)
-    }
-    
-    public func getDoubleValue(key: String, defaultValue: Double, options: [String: Any]?) -> Double {
-        // Note: DatadogFlags doesn't support per-evaluation context, so we ignore options here
-        return flagsClient.getDoubleValue(key: key, defaultValue: defaultValue)
-    }
-    
-    public func getObjectValue(key: String, defaultValue: [String: Any]) -> [String: Any] {
-        let anyValue = convertDictToAnyValue(defaultValue)
-        let result = flagsClient.getObjectValue(key: key, defaultValue: anyValue)
-        return convertAnyValueToDict(result)
-    }
-    
-    public func getObjectValue(key: String, defaultValue: [String: Any], options: [String: Any]?) -> [String: Any] {
-        // Note: DatadogFlags doesn't support per-evaluation context, so we ignore options here
-        let anyValue = convertDictToAnyValue(defaultValue)
-        let result = flagsClient.getObjectValue(key: key, defaultValue: anyValue)
-        return convertAnyValueToDict(result)
-    }
-    
-    // MARK: - DatadogFlaggingClientWithDetails Methods (Detailed Responses)
-    
-    public func getBooleanDetails(key: String, defaultValue: Bool) -> DatadogFlaggingDetails<Bool> {
+    internal func getBooleanDetails(key: String, defaultValue: Bool, options: [String: Any]?) -> AdapterFlagResult<Bool> {
         let details = flagsClient.getBooleanDetails(key: key, defaultValue: defaultValue)
-        return DatadogFlaggingDetails(
+        return AdapterFlagResult(
             value: details.value,
             variant: details.variant,
             reason: details.reason,
-            metadata: [:]
+            metadata: extractMetadata(flagKey: key, options: options)
         )
     }
     
-    public func getBooleanDetails(key: String, defaultValue: Bool, options: [String: Any]?) -> DatadogFlaggingDetails<Bool> {
-        // Note: DatadogFlags doesn't support per-evaluation context, so we ignore options here
-        let details = flagsClient.getBooleanDetails(key: key, defaultValue: defaultValue)
-        return DatadogFlaggingDetails(
-            value: details.value,
-            variant: details.variant,
-            reason: details.reason,
-            metadata: [:]
-        )
-    }
-    
-    public func getStringDetails(key: String, defaultValue: String) -> DatadogFlaggingDetails<String> {
+    internal func getStringDetails(key: String, defaultValue: String, options: [String: Any]?) -> AdapterFlagResult<String> {
         let details = flagsClient.getStringDetails(key: key, defaultValue: defaultValue)
-        return DatadogFlaggingDetails(
+        return AdapterFlagResult(
             value: details.value,
             variant: details.variant,
             reason: details.reason,
-            metadata: [:]
+            metadata: extractMetadata(flagKey: key, options: options)
         )
     }
     
-    public func getStringDetails(key: String, defaultValue: String, options: [String: Any]?) -> DatadogFlaggingDetails<String> {
-        // Note: DatadogFlags doesn't support per-evaluation context, so we ignore options here
-        let details = flagsClient.getStringDetails(key: key, defaultValue: defaultValue)
-        return DatadogFlaggingDetails(
-            value: details.value,
-            variant: details.variant,
-            reason: details.reason,
-            metadata: [:]
-        )
-    }
-    
-    public func getIntegerDetails(key: String, defaultValue: Int64) -> DatadogFlaggingDetails<Int64> {
+    internal func getIntegerDetails(key: String, defaultValue: Int64, options: [String: Any]?) -> AdapterFlagResult<Int64> {
         let intValue = Int(defaultValue)
         let details = flagsClient.getIntegerDetails(key: key, defaultValue: intValue)
-        return DatadogFlaggingDetails(
+        return AdapterFlagResult(
             value: Int64(details.value),
             variant: details.variant,
             reason: details.reason,
-            metadata: [:]
+            metadata: extractMetadata(flagKey: key, options: options)
         )
     }
     
-    public func getIntegerDetails(key: String, defaultValue: Int64, options: [String: Any]?) -> DatadogFlaggingDetails<Int64> {
-        // Note: DatadogFlags doesn't support per-evaluation context, so we ignore options here
-        let intValue = Int(defaultValue)
-        let details = flagsClient.getIntegerDetails(key: key, defaultValue: intValue)
-        return DatadogFlaggingDetails(
-            value: Int64(details.value),
-            variant: details.variant,
-            reason: details.reason,
-            metadata: [:]
-        )
-    }
-    
-    public func getDoubleDetails(key: String, defaultValue: Double) -> DatadogFlaggingDetails<Double> {
+    internal func getDoubleDetails(key: String, defaultValue: Double, options: [String: Any]?) -> AdapterFlagResult<Double> {
         let details = flagsClient.getDoubleDetails(key: key, defaultValue: defaultValue)
-        return DatadogFlaggingDetails(
+        return AdapterFlagResult(
             value: details.value,
             variant: details.variant,
             reason: details.reason,
-            metadata: [:]
+            metadata: extractMetadata(flagKey: key, options: options)
         )
     }
     
-    public func getDoubleDetails(key: String, defaultValue: Double, options: [String: Any]?) -> DatadogFlaggingDetails<Double> {
-        // Note: DatadogFlags doesn't support per-evaluation context, so we ignore options here
-        let details = flagsClient.getDoubleDetails(key: key, defaultValue: defaultValue)
-        return DatadogFlaggingDetails(
-            value: details.value,
-            variant: details.variant,
-            reason: details.reason,
-            metadata: [:]
-        )
-    }
-    
-    public func getObjectDetails(key: String, defaultValue: [String: Any]) -> DatadogFlaggingDetails<[String: Any]> {
+    internal func getObjectDetails(key: String, defaultValue: [String: Any], options: [String: Any]?) -> AdapterFlagResult<[String: Any]> {
         let anyValue = convertDictToAnyValue(defaultValue)
         let details = flagsClient.getObjectDetails(key: key, defaultValue: anyValue)
-        return DatadogFlaggingDetails(
+        return AdapterFlagResult(
             value: convertAnyValueToDict(details.value),
             variant: details.variant,
             reason: details.reason,
-            metadata: [:]
+            metadata: extractMetadata(flagKey: key, options: options)
         )
     }
     
-    public func getObjectDetails(key: String, defaultValue: [String: Any], options: [String: Any]?) -> DatadogFlaggingDetails<[String: Any]> {
-        // Note: DatadogFlags doesn't support per-evaluation context, so we ignore options here
-        let anyValue = convertDictToAnyValue(defaultValue)
-        let details = flagsClient.getObjectDetails(key: key, defaultValue: anyValue)
-        return DatadogFlaggingDetails(
-            value: convertAnyValueToDict(details.value),
-            variant: details.variant,
-            reason: details.reason,
-            metadata: [:]
-        )
+    // MARK: - Metadata Extraction
+    
+    private func extractMetadata(flagKey: String, options: [String: Any]?) -> [String: Any] {
+        var metadata: [String: Any] = [:]
+        
+        // Add flag key for debugging/tracing
+        metadata["flagKey"] = flagKey
+        
+        // Add provider information
+        metadata["provider"] = "DatadogFlags"
+        
+        // Add evaluation timestamp
+        let formatter = ISO8601DateFormatter()
+        metadata["evaluationTime"] = formatter.string(from: Date())
+        
+        // Extract context information from options if available
+        if let options = options {
+            // Add targeting key if present
+            if let targetingKey = options["targetingKey"] {
+                metadata["targetingKey"] = targetingKey
+            }
+            
+            // Add all other context attributes (excluding targetingKey to avoid duplication)
+            for (key, value) in options {
+                if key != "targetingKey" {
+                    metadata[key] = value
+                }
+            }
+        }
+        
+        return metadata
     }
     
     // MARK: - Helper Methods for Type Conversion

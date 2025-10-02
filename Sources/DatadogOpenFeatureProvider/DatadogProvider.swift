@@ -7,28 +7,16 @@ public class DatadogProvider: FeatureProvider {
     public let hooks: [any Hook] = []
     public let metadata: ProviderMetadata
     
-    private let client: DatadogFlaggingClientWithDetails
-    private let flagsClient: FlagsClientProtocol?
+    private let adapter: DatadogFlagsAdapter
+    private let flagsClient: FlagsClientProtocol
     
-    public init(client: DatadogFlaggingClientWithDetails) {
-        self.client = client
-        if let adapter = client as? DatadogFlagsAdapter {
-            self.flagsClient = adapter.flagsClient
-        } else {
-            self.flagsClient = nil
-        }
+    public init(flagsClient: FlagsClientProtocol) {
+        self.flagsClient = flagsClient
+        self.adapter = DatadogFlagsAdapter(flagsClient: flagsClient)
         self.metadata = DatadogProviderMetadata()
     }
     
-    public convenience init(flagsClient: FlagsClientProtocol) {
-        let adapter = DatadogFlagsAdapter(flagsClient: flagsClient)
-        self.init(client: adapter)
-    }
-    
     public func initialize(initialContext: EvaluationContext?) async throws {
-        guard let flagsClient = flagsClient else {
-            return
-        }
         
         if let context = initialContext {
             let ddContext = convertOpenFeatureContextToDatadogContext(context)
@@ -47,9 +35,6 @@ public class DatadogProvider: FeatureProvider {
     }
     
     public func onContextSet(oldContext: EvaluationContext?, newContext: EvaluationContext) async throws {
-        guard let flagsClient = flagsClient else {
-            return
-        }
         
         let ddContext = convertOpenFeatureContextToDatadogContext(newContext)
         // Set the context using completion handler
@@ -67,7 +52,7 @@ public class DatadogProvider: FeatureProvider {
     
     public func getBooleanEvaluation(key: String, defaultValue: Bool, context: EvaluationContext?) throws -> ProviderEvaluation<Bool> {
         let options = contextToOptions(context)
-        let details = client.getBooleanDetails(key: key, defaultValue: defaultValue, options: options)
+        let details = adapter.getBooleanDetails(key: key, defaultValue: defaultValue, options: options)
         
         return ProviderEvaluation(
             value: details.value,
@@ -79,7 +64,7 @@ public class DatadogProvider: FeatureProvider {
     
     public func getStringEvaluation(key: String, defaultValue: String, context: EvaluationContext?) throws -> ProviderEvaluation<String> {
         let options = contextToOptions(context)
-        let details = client.getStringDetails(key: key, defaultValue: defaultValue, options: options)
+        let details = adapter.getStringDetails(key: key, defaultValue: defaultValue, options: options)
         
         return ProviderEvaluation(
             value: details.value,
@@ -91,7 +76,7 @@ public class DatadogProvider: FeatureProvider {
     
     public func getIntegerEvaluation(key: String, defaultValue: Int64, context: EvaluationContext?) throws -> ProviderEvaluation<Int64> {
         let options = contextToOptions(context)
-        let details = client.getIntegerDetails(key: key, defaultValue: defaultValue, options: options)
+        let details = adapter.getIntegerDetails(key: key, defaultValue: defaultValue, options: options)
         
         return ProviderEvaluation(
             value: details.value,
@@ -103,7 +88,7 @@ public class DatadogProvider: FeatureProvider {
     
     public func getDoubleEvaluation(key: String, defaultValue: Double, context: EvaluationContext?) throws -> ProviderEvaluation<Double> {
         let options = contextToOptions(context)
-        let details = client.getDoubleDetails(key: key, defaultValue: defaultValue, options: options)
+        let details = adapter.getDoubleDetails(key: key, defaultValue: defaultValue, options: options)
         
         return ProviderEvaluation(
             value: details.value,
@@ -116,7 +101,7 @@ public class DatadogProvider: FeatureProvider {
     public func getObjectEvaluation(key: String, defaultValue: Value, context: EvaluationContext?) throws -> ProviderEvaluation<Value> {
         let options = contextToOptions(context)
         let defaultDict = valueToDict(defaultValue)
-        let details = client.getObjectDetails(key: key, defaultValue: defaultDict, options: options)
+        let details = adapter.getObjectDetails(key: key, defaultValue: defaultDict, options: options)
         
         return ProviderEvaluation(
             value: dictToValue(details.value),

@@ -1,111 +1,15 @@
 import Testing
+import Foundation
 import OpenFeature
 import DatadogFlags
 @testable import DatadogOpenFeatureProvider
 
-class MockDatadogClient: DatadogFlaggingClientWithDetails {
-    var booleanValues: [String: Bool] = [:]
-    var stringValues: [String: String] = [:]
-    var integerValues: [String: Int64] = [:]
-    var doubleValues: [String: Double] = [:]
-    var objectValues: [String: [String: Any]] = [:]
-    
-    func getBooleanValue(key: String, defaultValue: Bool) -> Bool {
-        return booleanValues[key] ?? defaultValue
-    }
-    
-    func getBooleanValue(key: String, defaultValue: Bool, options: [String: Any]?) -> Bool {
-        return booleanValues[key] ?? defaultValue
-    }
-    
-    func getStringValue(key: String, defaultValue: String) -> String {
-        return stringValues[key] ?? defaultValue
-    }
-    
-    func getStringValue(key: String, defaultValue: String, options: [String: Any]?) -> String {
-        return stringValues[key] ?? defaultValue
-    }
-    
-    func getIntegerValue(key: String, defaultValue: Int64) -> Int64 {
-        return integerValues[key] ?? defaultValue
-    }
-    
-    func getIntegerValue(key: String, defaultValue: Int64, options: [String: Any]?) -> Int64 {
-        return integerValues[key] ?? defaultValue
-    }
-    
-    func getDoubleValue(key: String, defaultValue: Double) -> Double {
-        return doubleValues[key] ?? defaultValue
-    }
-    
-    func getDoubleValue(key: String, defaultValue: Double, options: [String: Any]?) -> Double {
-        return doubleValues[key] ?? defaultValue
-    }
-    
-    func getObjectValue(key: String, defaultValue: [String: Any]) -> [String: Any] {
-        return objectValues[key] ?? defaultValue
-    }
-    
-    func getObjectValue(key: String, defaultValue: [String: Any], options: [String: Any]?) -> [String: Any] {
-        return objectValues[key] ?? defaultValue
-    }
-    
-    func getBooleanDetails(key: String, defaultValue: Bool) -> DatadogFlaggingDetails<Bool> {
-        let value = booleanValues[key] ?? defaultValue
-        return DatadogFlaggingDetails(value: value, variant: "test-variant", reason: "test-reason")
-    }
-    
-    func getBooleanDetails(key: String, defaultValue: Bool, options: [String: Any]?) -> DatadogFlaggingDetails<Bool> {
-        let value = booleanValues[key] ?? defaultValue
-        return DatadogFlaggingDetails(value: value, variant: "test-variant", reason: "test-reason")
-    }
-    
-    func getStringDetails(key: String, defaultValue: String) -> DatadogFlaggingDetails<String> {
-        let value = stringValues[key] ?? defaultValue
-        return DatadogFlaggingDetails(value: value, variant: "test-variant", reason: "test-reason")
-    }
-    
-    func getStringDetails(key: String, defaultValue: String, options: [String: Any]?) -> DatadogFlaggingDetails<String> {
-        let value = stringValues[key] ?? defaultValue
-        return DatadogFlaggingDetails(value: value, variant: "test-variant", reason: "test-reason")
-    }
-    
-    func getIntegerDetails(key: String, defaultValue: Int64) -> DatadogFlaggingDetails<Int64> {
-        let value = integerValues[key] ?? defaultValue
-        return DatadogFlaggingDetails(value: value, variant: "test-variant", reason: "test-reason")
-    }
-    
-    func getIntegerDetails(key: String, defaultValue: Int64, options: [String: Any]?) -> DatadogFlaggingDetails<Int64> {
-        let value = integerValues[key] ?? defaultValue
-        return DatadogFlaggingDetails(value: value, variant: "test-variant", reason: "test-reason")
-    }
-    
-    func getDoubleDetails(key: String, defaultValue: Double) -> DatadogFlaggingDetails<Double> {
-        let value = doubleValues[key] ?? defaultValue
-        return DatadogFlaggingDetails(value: value, variant: "test-variant", reason: "test-reason")
-    }
-    
-    func getDoubleDetails(key: String, defaultValue: Double, options: [String: Any]?) -> DatadogFlaggingDetails<Double> {
-        let value = doubleValues[key] ?? defaultValue
-        return DatadogFlaggingDetails(value: value, variant: "test-variant", reason: "test-reason")
-    }
-    
-    func getObjectDetails(key: String, defaultValue: [String: Any]) -> DatadogFlaggingDetails<[String: Any]> {
-        let value = objectValues[key] ?? defaultValue
-        return DatadogFlaggingDetails(value: value, variant: "test-variant", reason: "test-reason")
-    }
-    
-    func getObjectDetails(key: String, defaultValue: [String: Any], options: [String: Any]?) -> DatadogFlaggingDetails<[String: Any]> {
-        let value = objectValues[key] ?? defaultValue
-        return DatadogFlaggingDetails(value: value, variant: "test-variant", reason: "test-reason")
-    }
-}
 
 @Test func testBooleanEvaluation() async throws {
-    let mockClient = MockDatadogClient()
-    mockClient.booleanValues["test-flag"] = true
+    let mockFlagsClient = MockDatadogFlagsClient()
+    mockFlagsClient.setupFlag(key: "test-flag", value: AnyValue.bool(true), variant: "test-variant", reason: "test-reason")
     
-    let provider = DatadogProvider(client: mockClient)
+    let provider = DatadogProvider(flagsClient: mockFlagsClient)
     let result = try provider.getBooleanEvaluation(key: "test-flag", defaultValue: false, context: nil)
     
     #expect(result.value == true)
@@ -114,10 +18,10 @@ class MockDatadogClient: DatadogFlaggingClientWithDetails {
 }
 
 @Test func testStringEvaluation() async throws {
-    let mockClient = MockDatadogClient()
-    mockClient.stringValues["test-flag"] = "test-value"
+    let mockFlagsClient = MockDatadogFlagsClient()
+    mockFlagsClient.setupFlag(key: "test-flag", value: AnyValue.string("test-value"), variant: "test-variant", reason: "test-reason")
     
-    let provider = DatadogProvider(client: mockClient)
+    let provider = DatadogProvider(flagsClient: mockFlagsClient)
     let result = try provider.getStringEvaluation(key: "test-flag", defaultValue: "default", context: nil)
     
     #expect(result.value == "test-value")
@@ -126,10 +30,10 @@ class MockDatadogClient: DatadogFlaggingClientWithDetails {
 }
 
 @Test func testIntegerEvaluation() async throws {
-    let mockClient = MockDatadogClient()
-    mockClient.integerValues["test-flag"] = 42
+    let mockFlagsClient = MockDatadogFlagsClient()
+    mockFlagsClient.setupFlag(key: "test-flag", value: AnyValue.int(42), variant: "test-variant", reason: "test-reason")
     
-    let provider = DatadogProvider(client: mockClient)
+    let provider = DatadogProvider(flagsClient: mockFlagsClient)
     let result = try provider.getIntegerEvaluation(key: "test-flag", defaultValue: 0, context: nil)
     
     #expect(result.value == 42)
@@ -138,10 +42,10 @@ class MockDatadogClient: DatadogFlaggingClientWithDetails {
 }
 
 @Test func testDoubleEvaluation() async throws {
-    let mockClient = MockDatadogClient()
-    mockClient.doubleValues["test-flag"] = 3.14
+    let mockFlagsClient = MockDatadogFlagsClient()
+    mockFlagsClient.setupFlag(key: "test-flag", value: AnyValue.double(3.14), variant: "test-variant", reason: "test-reason")
     
-    let provider = DatadogProvider(client: mockClient)
+    let provider = DatadogProvider(flagsClient: mockFlagsClient)
     let result = try provider.getDoubleEvaluation(key: "test-flag", defaultValue: 0.0, context: nil)
     
     #expect(result.value == 3.14)
@@ -150,15 +54,15 @@ class MockDatadogClient: DatadogFlaggingClientWithDetails {
 }
 
 @Test func testProviderMetadata() async throws {
-    let mockClient = MockDatadogClient()
-    let provider = DatadogProvider(client: mockClient)
+    let mockFlagsClient = MockDatadogFlagsClient()
+    let provider = DatadogProvider(flagsClient: mockFlagsClient)
     
     #expect(provider.metadata.name == "Datadog OpenFeature Provider")
 }
 
 @Test func testProviderFactory() async throws {
-    let mockClient = MockDatadogClient()
-    let provider = DatadogOpenFeatureProvider.createProvider(client: mockClient)
+    let mockFlagsClient = MockDatadogFlagsClient()
+    let provider = DatadogOpenFeatureProvider.createProvider(flagsClient: mockFlagsClient)
     
     #expect(provider.metadata.name == "Datadog OpenFeature Provider")
 }
@@ -169,8 +73,7 @@ class MockDatadogClient: DatadogFlaggingClientWithDetails {
     let mockFlagsClient = MockDatadogFlagsClient()
     mockFlagsClient.setupFlag(key: "test-bool", value: AnyValue.bool(true), variant: "on", reason: "targeting_match")
     
-    let adapter = DatadogFlagsAdapter(flagsClient: mockFlagsClient)
-    let provider = DatadogProvider(client: adapter)
+    let provider = DatadogProvider(flagsClient: mockFlagsClient)
     
     let result = try provider.getBooleanEvaluation(key: "test-bool", defaultValue: false, context: nil)
     
@@ -202,6 +105,55 @@ class MockDatadogClient: DatadogFlaggingClientWithDetails {
     
     #expect(mockFlagsClient.lastSetContext != nil)
     #expect(mockFlagsClient.lastSetContext?.targetingKey == "user123")
+}
+
+@Test func testMetadataPopulation() async throws {
+    let mockFlagsClient = MockDatadogFlagsClient()
+    mockFlagsClient.setupFlag(key: "test-flag", value: AnyValue.bool(true), variant: "on", reason: "targeting_match")
+    
+    let provider = DatadogProvider(flagsClient: mockFlagsClient)
+    
+    // Create context with targeting key and attributes
+    let context = ImmutableContext(
+        targetingKey: "user456",
+        structure: ImmutableStructure(attributes: [
+            "segment": Value.string("beta"),
+            "plan": Value.string("pro")
+        ])
+    )
+    
+    let result = try provider.getBooleanEvaluation(key: "test-flag", defaultValue: false, context: context)
+    
+    // Verify basic flag evaluation
+    #expect(result.value == true)
+    #expect(result.variant == "on")
+    #expect(result.reason == "targeting_match")
+    
+    // Verify metadata is populated
+    #expect(result.flagMetadata.count > 0)
+    
+    // Check that metadata contains expected keys
+    let metadataKeys = result.flagMetadata.keys
+    #expect(metadataKeys.contains("flagKey"))
+    #expect(metadataKeys.contains("provider"))
+    #expect(metadataKeys.contains("evaluationTime"))
+    #expect(metadataKeys.contains("targetingKey"))
+    #expect(metadataKeys.contains("segment"))
+    #expect(metadataKeys.contains("plan"))
+    
+    // Check metadata values
+    #expect(result.flagMetadata["flagKey"]?.asString() == "test-flag")
+    #expect(result.flagMetadata["provider"]?.asString() == "DatadogFlags")
+    #expect(result.flagMetadata["targetingKey"]?.asString() == "user456")
+    #expect(result.flagMetadata["segment"]?.asString() == "beta")
+    #expect(result.flagMetadata["plan"]?.asString() == "pro")
+    
+    // Check that evaluationTime is a valid ISO 8601 timestamp
+    if let evaluationTime = result.flagMetadata["evaluationTime"]?.asString() {
+        let formatter = ISO8601DateFormatter()
+        let date = formatter.date(from: evaluationTime)
+        #expect(date != nil)
+    }
 }
 
 // MARK: - Mock DatadogFlags Client for Integration Testing

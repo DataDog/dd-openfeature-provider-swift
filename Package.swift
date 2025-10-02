@@ -24,7 +24,7 @@ let package = Package(
         .target(
             name: "DatadogOpenFeatureProvider",
             dependencies: [
-                .product(name: "DatadogFlags", package: "dd-sdk-ios")
+                .product(name: "DatadogFlags", package: "dd-sdk-ios"),
                 .product(name: "OpenFeature", package: "swift-sdk"),
             ]),
         .testTarget(
