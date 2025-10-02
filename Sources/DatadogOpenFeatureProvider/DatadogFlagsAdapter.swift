@@ -16,6 +16,7 @@ internal struct AdapterFlagResult<T> {
     }
 }
 
+
 internal class DatadogFlagsAdapter {
     let flagsClient: FlagsClientProtocol
     private static let iso8601Formatter = ISO8601DateFormatter()
@@ -68,10 +69,10 @@ internal class DatadogFlagsAdapter {
     }
     
     internal func getObjectDetails(key: String, defaultValue: [String: Any], options: [String: Any]?) -> AdapterFlagResult<[String: Any]> {
-        let anyValue = convertDictToAnyValue(defaultValue)
+        let anyValue = AnyValue(defaultValue)
         let details = flagsClient.getObjectDetails(key: key, defaultValue: anyValue)
         return AdapterFlagResult(
-            value: convertAnyValueToDict(details.value),
+            value: details.value.toDictionary(),
             variant: details.variant,
             reason: details.reason,
             metadata: extractMetadata(flagKey: key, options: options)
@@ -110,60 +111,50 @@ internal class DatadogFlagsAdapter {
         return metadata
     }
     
-    // MARK: - Helper Methods for Type Conversion
-    
-    private func convertAnyToAnyValue(_ any: Any) -> AnyValue {
-        switch any {
+}
+
+// MARK: - DatadogFlags AnyValue Extensions
+extension AnyValue {
+    /// Creates an AnyValue from Any type
+    init(_ value: Any) {
+        switch value {
         case let bool as Bool:
-            return .bool(bool)
+            self = .bool(bool)
         case let string as String:
-            return .string(string)
+            self = .string(string)
         case let int as Int:
-            return .int(int)
+            self = .int(int)
         case let int64 as Int64:
-            return .int(Int(int64))
+            self = .int(Int(int64))
         case let double as Double:
-            return .double(double)
+            self = .double(double)
         case let dict as [String: Any]:
             var structure: [String: AnyValue] = [:]
             for (key, value) in dict {
-                structure[key] = convertAnyToAnyValue(value)
+                structure[key] = AnyValue(value)
             }
-            return .dictionary(structure)
+            self = .dictionary(structure)
         case let array as [Any]:
-            return .array(array.map { convertAnyToAnyValue($0) })
+            self = .array(array.map { AnyValue($0) })
         case is NSNull:
-            return .null
+            self = .null
         default:
-            return .string(String(describing: any))
+            self = .string(String(describing: value))
         }
     }
     
-    private func convertDictToAnyValue(_ dict: [String: Any]) -> AnyValue {
+    /// Creates an AnyValue from a dictionary
+    init(_ dictionary: [String: Any]) {
         var structure: [String: AnyValue] = [:]
-        for (key, value) in dict {
-            structure[key] = convertAnyToAnyValue(value)
+        for (key, value) in dictionary {
+            structure[key] = AnyValue(value)
         }
-        return .dictionary(structure)
+        self = .dictionary(structure)
     }
     
-    private func convertAnyValueToDict(_ anyValue: AnyValue) -> [String: Any] {
-        switch anyValue {
-        case .dictionary(let structure):
-            var result: [String: Any] = [:]
-            for (key, value) in structure {
-                result[key] = convertAnyValueToAny(value)
-            }
-            return result
-        case .array(let list):
-            return ["_list": list.map { convertAnyValueToAny($0) }]
-        default:
-            return ["_value": convertAnyValueToAny(anyValue)]
-        }
-    }
-    
-    private func convertAnyValueToAny(_ anyValue: AnyValue) -> Any {
-        switch anyValue {
+    /// Converts AnyValue to Any type
+    func toAny() -> Any {
+        switch self {
         case .bool(let bool):
             return bool
         case .string(let string):
@@ -175,13 +166,29 @@ internal class DatadogFlagsAdapter {
         case .dictionary(let structure):
             var result: [String: Any] = [:]
             for (key, value) in structure {
-                result[key] = convertAnyValueToAny(value)
+                result[key] = value.toAny()
             }
             return result
         case .array(let list):
-            return list.map { convertAnyValueToAny($0) }
+            return list.map { $0.toAny() }
         case .null:
             return NSNull()
+        }
+    }
+    
+    /// Converts AnyValue to dictionary with special handling for non-dictionary types
+    func toDictionary() -> [String: Any] {
+        switch self {
+        case .dictionary(let structure):
+            var result: [String: Any] = [:]
+            for (key, value) in structure {
+                result[key] = value.toAny()
+            }
+            return result
+        case .array(let list):
+            return ["_list": list.map { $0.toAny() }]
+        default:
+            return ["_value": self.toAny()]
         }
     }
 }
