@@ -50,54 +50,29 @@ public class DatadogProvider: FeatureProvider {
     
     public func getBooleanEvaluation(key: String, defaultValue: Bool, context: EvaluationContext?) throws -> ProviderEvaluation<Bool> {
         let details = flagsClient.getBooleanDetails(key: key, defaultValue: defaultValue)
-        return ProviderEvaluation(
-            value: details.value,
-            flagMetadata: FlagMetadataBuilder.create(flagKey: key, context: context),
-            variant: details.variant,
-            reason: details.reason
-        )
+        return ProviderEvaluation(details, flagKey: key, context: context)
     }
     
     public func getStringEvaluation(key: String, defaultValue: String, context: EvaluationContext?) throws -> ProviderEvaluation<String> {
         let details = flagsClient.getStringDetails(key: key, defaultValue: defaultValue)
-        return ProviderEvaluation(
-            value: details.value,
-            flagMetadata: FlagMetadataBuilder.create(flagKey: key, context: context),
-            variant: details.variant,
-            reason: details.reason
-        )
+        return ProviderEvaluation(details, flagKey: key, context: context)
     }
     
     public func getIntegerEvaluation(key: String, defaultValue: Int64, context: EvaluationContext?) throws -> ProviderEvaluation<Int64> {
         let intValue = Int(defaultValue)
         let details = flagsClient.getIntegerDetails(key: key, defaultValue: intValue)
-        return ProviderEvaluation(
-            value: Int64(details.value),
-            flagMetadata: FlagMetadataBuilder.create(flagKey: key, context: context),
-            variant: details.variant,
-            reason: details.reason
-        )
+        return ProviderEvaluation(details, flagKey: key, context: context)
     }
     
     public func getDoubleEvaluation(key: String, defaultValue: Double, context: EvaluationContext?) throws -> ProviderEvaluation<Double> {
         let details = flagsClient.getDoubleDetails(key: key, defaultValue: defaultValue)
-        return ProviderEvaluation(
-            value: details.value,
-            flagMetadata: FlagMetadataBuilder.create(flagKey: key, context: context),
-            variant: details.variant,
-            reason: details.reason
-        )
+        return ProviderEvaluation(details, flagKey: key, context: context)
     }
     
     public func getObjectEvaluation(key: String, defaultValue: Value, context: EvaluationContext?) throws -> ProviderEvaluation<Value> {
         let defaultAnyValue = AnyValue(defaultValue)
         let details = flagsClient.getObjectDetails(key: key, defaultValue: defaultAnyValue)
-        return ProviderEvaluation(
-            value: Value(details.value),
-            flagMetadata: FlagMetadataBuilder.create(flagKey: key, context: context),
-            variant: details.variant,
-            reason: details.reason
-        )
+        return ProviderEvaluation(details, flagKey: key, context: context)
     }
     
 }
