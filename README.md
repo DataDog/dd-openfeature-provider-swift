@@ -82,7 +82,7 @@ xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=tvOS Simula
 
 ## Usage
 
-### Complete Setup
+### Quick Start
 
 ```swift
 import OpenFeature
@@ -101,39 +101,34 @@ Datadog.initialize(with: config, trackingConsent: .granted)
 let flagsConfig = Flags.Configuration()
 Flags.enable(with: flagsConfig)
 
-// 2. Create the DatadogFlags client
-let flagsClient = FlagsClient.create()
+// 2. Create user context for targeting
+let context = ImmutableContext(targetingKey: "user123")
 
-// 3. Create user context for targeting
-let context = ImmutableContext(
-    targetingKey: "user123",
-    structure: ImmutableStructure(attributes: [
-        "segment": Value.string("premium"),
-        "beta_user": Value.boolean(true)
-    ])
-)
-
-// 4. Create and register the OpenFeature provider using the real DatadogFlags client
-let provider = DatadogOpenFeatureProvider.createProvider(flagsClient: flagsClient)
+// 3. Create and register the OpenFeature provider
+let provider = DatadogProvider()
 await OpenFeatureAPI.shared.setProviderAndWait(provider: provider, initialContext: context)
 
-// 5. Get OpenFeature client and evaluate flags
+// 4. Get OpenFeature client and evaluate flags
 let client = OpenFeatureAPI.shared.getClient()
 let flagValue = client.getBooleanValue(key: "my-feature-flag", defaultValue: false)
 ```
 
-### Dynamic Context Updates
+### Update With Additional Context Attributes
 
 ```swift
-// Update context using mutable context builder. Immutable is okay too.
-let updatedContext = MutableContext(targetingKey: "user123")
-updatedContext.add(key: "segment", value: .string("enterprise"))
-updatedContext.add(key: "beta_user", value: .boolean(false))
-updatedContext.add(key: "region", value: .string("us-west"))
+// Create detailed user context for advanced targeting
+let newContext = ImmutableContext(
+    targetingKey: "user123",
+    structure: ImmutableStructure(attributes: [
+        "segment": Value.string("premium"),
+        "beta_user": Value.boolean(true),
+        "region": Value.string("us-west")
+    ])
+)
 
-await OpenFeatureAPI.shared.setEvaluationContextAndWait(evaluationContext: updatedContext)
+await OpenFeatureAPI.shared.setEvaluationContextAndWait(evaluationContext: newContext)
 
-// Flag evaluations will now use the updated context
+// Flag evaluations will now use the new context
 let client = OpenFeatureAPI.shared.getClient()
 let flagValue = client.getBooleanValue(key: "my-feature-flag", defaultValue: false)
 ```
@@ -141,37 +136,30 @@ let flagValue = client.getBooleanValue(key: "my-feature-flag", defaultValue: fal
 ## Architecture
 
 ```
-┌─────────────────-┐    ┌──────────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│ OpenFeature App  │────│ DatadogProvider      │────│ DatadogFlags     │────│ Datadog Backend │
-│                  │    │                      │    │ Adapter          │    │                 │
-│ - getBooleanValue│    │ - Lifecycle mgmt     │    │ - Type mapping   │    │ - Flag configs  │
-│ - getStringValue │    │ - Context conversion │    │ - Error handling │    │ - User targeting│
-│ - setContext     │    │ - Async operations   │    │ - Protocol bridge│    │ - A/B testing   │
-└─────────────────-┘    └──────────────────────┘    └──────────────────┘    └─────────────────┘
-                                                            │
-                                                            ▼
-                                                    ┌─────────────────┐
-                                                    │ DatadogFlags    │
-                                                    │ SDK Client      │
-                                                    │ (dd-sdk-ios)    │
-                                                    └─────────────────┘
+┌─────────────────-┐    ┌──────────────────────┐    ┌─────────────────┐
+│ OpenFeature App  │────│ DatadogProvider      │────│ Datadog Backend │
+│                  │    │                      │    │                 │
+│ - getBooleanValue│    │ - FlagsClient mgmt   │    │ - Flag configs  │
+│ - getStringValue │    │ - Lifecycle mgmt     │    │ - User targeting│
+│ - setContext     │    │ - Context conversion │    │ - A/B testing   │
+└─────────────────-┘    │ - Type mapping       │    └─────────────────┘
+                        │ - Error handling     │            ▲
+                        └──────────────────────┘            │
+                                    │                       │
+                                    ▼                       │
+                            ┌─────────────────┐             │
+                            │ DatadogFlags    │──────-──────┘
+                            │ SDK Client      │
+                            │ (dd-sdk-ios)    │
+                            └─────────────────┘
 ```
 
 ### Key Components
 
 - **OpenFeature App**: Your application using OpenFeature's standard API
-- **DatadogProvider**: Main OpenFeature provider implementation that handles lifecycle and context management
-- **DatadogFlags Adapter**: Bridge layer that converts between OpenFeature and DatadogFlags protocols/types
-- **DatadogFlags SDK Client**: The client from dd-sdk-ios that communicates with Datadog's backend
+- **DatadogProvider**: Main OpenFeature provider that creates and manages the FlagsClient internally, handles lifecycle, context management, and type conversions
+- **DatadogFlags SDK Client**: The client from dd-sdk-ios that communicates with Datadog's backend (created automatically by the provider)
 - **Datadog Backend**: Datadog's service that serves flag configurations and handles targeting
-
-### Data Flow
-
-1. App calls OpenFeature API (e.g., `getBooleanValue`)
-2. DatadogProvider receives the call and converts OpenFeature context
-3. DatadogFlagsAdapter maps OpenFeature types to DatadogFlags types
-4. DatadogFlags SDK Client makes the actual flag evaluation
-5. Response flows back through the adapter (with type conversion) to the app
 
 ## Contributing
 

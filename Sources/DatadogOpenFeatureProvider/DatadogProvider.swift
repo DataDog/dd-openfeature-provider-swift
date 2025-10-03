@@ -2,6 +2,7 @@ import Foundation
 import OpenFeature
 import Combine
 import DatadogFlags
+import DatadogInternal
 
 public class DatadogProvider: FeatureProvider {
     public let hooks: [any Hook] = []
@@ -9,7 +10,17 @@ public class DatadogProvider: FeatureProvider {
     
     private let flagsClient: FlagsClientProtocol
     
-    public init(flagsClient: FlagsClientProtocol) {
+    public init(
+        name: String = FlagsClient.defaultName,
+        configuration: FlagsClient.Configuration = .init(),
+        core: DatadogCoreProtocol = CoreRegistry.default
+    ) {
+        self.flagsClient = FlagsClient.create(name: name, with: configuration, in: core)
+        self.metadata = DatadogProviderMetadata()
+    }
+    
+    /// Internal initializer for testing purposes only
+    internal init(flagsClient: FlagsClientProtocol) {
         self.flagsClient = flagsClient
         self.metadata = DatadogProviderMetadata()
     }
@@ -88,4 +99,3 @@ extension DatadogProvider: EventPublisher {
         return Empty<ProviderEvent?, Never>().eraseToAnyPublisher()
     }
 }
-

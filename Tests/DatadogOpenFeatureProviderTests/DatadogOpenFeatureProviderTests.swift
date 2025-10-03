@@ -2,6 +2,7 @@ import Testing
 import Foundation
 import OpenFeature
 import DatadogFlags
+import DatadogInternal
 @testable import DatadogOpenFeatureProvider
 
 
@@ -57,14 +58,14 @@ import DatadogFlags
     let mockFlagsClient = MockDatadogFlagsClient()
     let provider = DatadogProvider(flagsClient: mockFlagsClient)
     
-    #expect(provider.metadata.name == "Datadog OpenFeature Provider")
+    #expect(provider.metadata.name == "datadog")
 }
 
 @Test func testProviderFactory() async throws {
     let mockFlagsClient = MockDatadogFlagsClient()
     let provider = DatadogProvider(flagsClient: mockFlagsClient)
     
-    #expect(provider.metadata.name == "Datadog OpenFeature Provider")
+    #expect(provider.metadata.name == "datadog")
 }
 
 // MARK: - Type Conversion Tests
@@ -190,7 +191,18 @@ import DatadogFlags
     let mockFlagsClient = MockDatadogFlagsClient()
     let provider = DatadogProvider(flagsClient: mockFlagsClient)
     
-    #expect(provider.metadata.name == "Datadog OpenFeature Provider")
+    #expect(provider.metadata.name == "datadog")
+}
+
+@Test func testDatadogProviderConstructor() async throws {
+    // Test the public constructor with default parameters
+    // In test environment without proper initialization, this returns NOPFlagsClient
+    let provider = DatadogProvider()
+    #expect(provider.metadata.name == "datadog")
+    
+    // Verify it handles flag evaluation gracefully with NOPFlagsClient
+    let result = try provider.getBooleanEvaluation(key: "test-flag", defaultValue: false, context: nil)
+    #expect(result.value == false) // default value
 }
 
 @Test func testContextConversionAndAsyncOperations() async throws {
@@ -260,7 +272,7 @@ import DatadogFlags
     }
 }
 
-// MARK: - Mock DatadogFlags Client for Integration Testing
+// MARK: - Mock DatadogFlags Client for Testing
 
 class MockDatadogFlagsClient: FlagsClientProtocol {
     private var flags: [String: (value: AnyValue, variant: String?, reason: String?)] = [:]
