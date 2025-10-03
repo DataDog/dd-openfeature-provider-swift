@@ -62,7 +62,7 @@ import DatadogFlags
 
 @Test func testProviderFactory() async throws {
     let mockFlagsClient = MockDatadogFlagsClient()
-    let provider = DatadogOpenFeatureProvider.createProvider(flagsClient: mockFlagsClient)
+    let provider = DatadogProvider(flagsClient: mockFlagsClient)
     
     #expect(provider.metadata.name == "Datadog OpenFeature Provider")
 }
@@ -186,9 +186,9 @@ import DatadogFlags
     #expect(metadata.count == 3) // Only flagKey, provider, evaluationTime
 }
 
-@Test func testDatadogFlagsFactoryMethod() async throws {
+@Test func testDatadogProviderDirect() async throws {
     let mockFlagsClient = MockDatadogFlagsClient()
-    let provider = DatadogOpenFeatureProvider.createProvider(flagsClient: mockFlagsClient)
+    let provider = DatadogProvider(flagsClient: mockFlagsClient)
     
     #expect(provider.metadata.name == "Datadog OpenFeature Provider")
 }

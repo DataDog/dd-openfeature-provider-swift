@@ -78,7 +78,7 @@ public class DatadogProvider: FeatureProvider {
 }
 
 struct DatadogProviderMetadata: ProviderMetadata {
-    let name: String? = "Datadog OpenFeature Provider"
+    let name: String? = "datadog"
 }
 
 extension DatadogProvider: EventPublisher {
