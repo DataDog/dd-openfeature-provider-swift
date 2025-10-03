@@ -67,9 +67,69 @@ import DatadogFlags
     #expect(provider.metadata.name == "Datadog OpenFeature Provider")
 }
 
-// MARK: - Integration Tests with DatadogFlagsAdapter
+// MARK: - Type Conversion Tests
 
-@Test func testDatadogFlagsAdapterIntegration() async throws {
+@Test func testAnyValueToValueConversion() async throws {
+    // Test boolean conversion
+    let boolAnyValue = AnyValue.bool(true)
+    let boolValue = Value(boolAnyValue)
+    #expect(boolValue == .boolean(true))
+    
+    // Test string conversion
+    let stringAnyValue = AnyValue.string("test")
+    let stringValue = Value(stringAnyValue)
+    #expect(stringValue == .string("test"))
+    
+    // Test integer conversion
+    let intAnyValue = AnyValue.int(42)
+    let intValue = Value(intAnyValue)
+    #expect(intValue == .integer(42))
+    
+    // Test double conversion
+    let doubleAnyValue = AnyValue.double(3.14)
+    let doubleValue = Value(doubleAnyValue)
+    #expect(doubleValue == .double(3.14))
+}
+
+@Test func testValueToAnyValueConversion() async throws {
+    // Test boolean conversion
+    let boolValue = Value.boolean(true)
+    let boolAnyValue = AnyValue(boolValue)
+    #expect(boolAnyValue == .bool(true))
+    
+    // Test string conversion
+    let stringValue = Value.string("test")
+    let stringAnyValue = AnyValue(stringValue)
+    #expect(stringAnyValue == .string("test"))
+    
+    // Test integer conversion
+    let intValue = Value.integer(42)
+    let intAnyValue = AnyValue(intValue)
+    #expect(intAnyValue == .int(42))
+    
+    // Test double conversion
+    let doubleValue = Value.double(3.14)
+    let doubleAnyValue = AnyValue(doubleValue)
+    #expect(doubleAnyValue == .double(3.14))
+}
+
+@Test func testFlagsEvaluationContextConversion() async throws {
+    let context = ImmutableContext(
+        targetingKey: "user123",
+        structure: ImmutableStructure(attributes: [
+            "email": Value.string("test@example.com"),
+            "age": Value.integer(25)
+        ])
+    )
+    
+    let flagsContext = FlagsEvaluationContext(context)
+    
+    #expect(flagsContext.targetingKey == "user123")
+    #expect(flagsContext.attributes["email"] == "test@example.com")
+    #expect(flagsContext.attributes["age"] == "25")
+}
+
+@Test func testDirectProviderIntegration() async throws {
     let mockFlagsClient = MockDatadogFlagsClient()
     mockFlagsClient.setupFlag(key: "test-bool", value: AnyValue.bool(true), variant: "on", reason: "targeting_match")
     
@@ -80,6 +140,50 @@ import DatadogFlags
     #expect(result.value == true)
     #expect(result.variant == "on")
     #expect(result.reason == "targeting_match")
+}
+
+@Test func testFlagMetadataBuilder() async throws {
+    let context = ImmutableContext(
+        targetingKey: "user123",
+        structure: ImmutableStructure(attributes: [
+            "email": Value.string("test@example.com"),
+            "age": Value.integer(30),
+            "premium": Value.boolean(true)
+        ])
+    )
+    
+    let metadata = FlagMetadataBuilder.create(flagKey: "test-flag", context: context)
+    
+    // Test required metadata fields
+    #expect(metadata["flagKey"]?.asString() == "test-flag")
+    #expect(metadata["provider"]?.asString() == "DatadogFlags")
+    #expect(metadata["targetingKey"]?.asString() == "user123")
+    #expect(metadata["evaluationTime"] != nil)
+    
+    // Test context attribute conversion
+    #expect(metadata["email"]?.asString() == "test@example.com")
+    #expect(metadata["age"]?.asInteger() == 30)
+    #expect(metadata["premium"]?.asBoolean() == true)
+    
+    // Test that evaluationTime is a valid ISO8601 string
+    if let evaluationTime = metadata["evaluationTime"]?.asString() {
+        let formatter = ISO8601DateFormatter()
+        let date = formatter.date(from: evaluationTime)
+        #expect(date != nil)
+    }
+}
+
+@Test func testFlagMetadataBuilderWithNilContext() async throws {
+    let metadata = FlagMetadataBuilder.create(flagKey: "test-flag", context: nil)
+    
+    // Test required metadata fields are present
+    #expect(metadata["flagKey"]?.asString() == "test-flag")
+    #expect(metadata["provider"]?.asString() == "DatadogFlags")
+    #expect(metadata["evaluationTime"] != nil)
+    
+    // Test that context-specific fields are not present
+    #expect(metadata["targetingKey"] == nil)
+    #expect(metadata.count == 3) // Only flagKey, provider, evaluationTime
 }
 
 @Test func testDatadogFlagsFactoryMethod() async throws {

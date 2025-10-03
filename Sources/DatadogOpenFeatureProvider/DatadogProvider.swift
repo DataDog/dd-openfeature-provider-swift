@@ -7,12 +7,10 @@ public class DatadogProvider: FeatureProvider {
     public let hooks: [any Hook] = []
     public let metadata: ProviderMetadata
     
-    private let adapter: DatadogFlagsAdapter
     private let flagsClient: FlagsClientProtocol
     
     public init(flagsClient: FlagsClientProtocol) {
         self.flagsClient = flagsClient
-        self.adapter = DatadogFlagsAdapter(flagsClient: flagsClient)
         self.metadata = DatadogProviderMetadata()
     }
     
@@ -51,45 +49,56 @@ public class DatadogProvider: FeatureProvider {
     }
     
     public func getBooleanEvaluation(key: String, defaultValue: Bool, context: EvaluationContext?) throws -> ProviderEvaluation<Bool> {
-        let options = contextToOptions(context)
-        return adapter.getBooleanDetails(key: key, defaultValue: defaultValue, options: options)
+        let details = flagsClient.getBooleanDetails(key: key, defaultValue: defaultValue)
+        return ProviderEvaluation(
+            value: details.value,
+            flagMetadata: FlagMetadataBuilder.create(flagKey: key, context: context),
+            variant: details.variant,
+            reason: details.reason
+        )
     }
     
     public func getStringEvaluation(key: String, defaultValue: String, context: EvaluationContext?) throws -> ProviderEvaluation<String> {
-        let options = contextToOptions(context)
-        return adapter.getStringDetails(key: key, defaultValue: defaultValue, options: options)
+        let details = flagsClient.getStringDetails(key: key, defaultValue: defaultValue)
+        return ProviderEvaluation(
+            value: details.value,
+            flagMetadata: FlagMetadataBuilder.create(flagKey: key, context: context),
+            variant: details.variant,
+            reason: details.reason
+        )
     }
     
     public func getIntegerEvaluation(key: String, defaultValue: Int64, context: EvaluationContext?) throws -> ProviderEvaluation<Int64> {
-        let options = contextToOptions(context)
-        return adapter.getIntegerDetails(key: key, defaultValue: defaultValue, options: options)
+        let intValue = Int(defaultValue)
+        let details = flagsClient.getIntegerDetails(key: key, defaultValue: intValue)
+        return ProviderEvaluation(
+            value: Int64(details.value),
+            flagMetadata: FlagMetadataBuilder.create(flagKey: key, context: context),
+            variant: details.variant,
+            reason: details.reason
+        )
     }
     
     public func getDoubleEvaluation(key: String, defaultValue: Double, context: EvaluationContext?) throws -> ProviderEvaluation<Double> {
-        let options = contextToOptions(context)
-        return adapter.getDoubleDetails(key: key, defaultValue: defaultValue, options: options)
+        let details = flagsClient.getDoubleDetails(key: key, defaultValue: defaultValue)
+        return ProviderEvaluation(
+            value: details.value,
+            flagMetadata: FlagMetadataBuilder.create(flagKey: key, context: context),
+            variant: details.variant,
+            reason: details.reason
+        )
     }
     
     public func getObjectEvaluation(key: String, defaultValue: Value, context: EvaluationContext?) throws -> ProviderEvaluation<Value> {
-        let options = contextToOptions(context)
-        return adapter.getObjectDetails(key: key, defaultValue: defaultValue, options: options)
+        let defaultAnyValue = AnyValue(defaultValue)
+        let details = flagsClient.getObjectDetails(key: key, defaultValue: defaultAnyValue)
+        return ProviderEvaluation(
+            value: Value(details.value),
+            flagMetadata: FlagMetadataBuilder.create(flagKey: key, context: context),
+            variant: details.variant,
+            reason: details.reason
+        )
     }
-    
-    private func contextToOptions(_ context: EvaluationContext?) -> [String: Any]? {
-        guard let context = context else { return nil }
-        
-        var options: [String: Any] = [:]
-        
-        let targetingKey = context.getTargetingKey()
-        options["targetingKey"] = targetingKey
-        
-        for (key, value) in context.asMap() {
-            options[key] = value.toAny()
-        }
-        
-        return options.isEmpty ? nil : options
-    }
-    
     
 }
 
@@ -105,88 +114,3 @@ extension DatadogProvider: EventPublisher {
     }
 }
 
-// MARK: - OpenFeature Value Extensions
-extension Value {
-    /// Converts an OpenFeature Value to Any type for interoperability
-    func toAny() -> Any {
-        switch self {
-        case .boolean(let bool):
-            return bool
-        case .string(let string):
-            return string
-        case .integer(let int):
-            return int
-        case .double(let double):
-            return double
-        case .date(let date):
-            return date
-        case .structure(let structure):
-            return structure.mapValues { $0.toAny() }
-        case .list(let list):
-            return list.map { $0.toAny() }
-        case .null:
-            return NSNull()
-        }
-    }
-    
-    /// Converts OpenFeature Value to String representation
-    func toString() -> String {
-        switch self {
-        case .boolean(let bool):
-            return bool.description
-        case .string(let string):
-            return string
-        case .integer(let int):
-            return int.description
-        case .double(let double):
-            return double.description
-        case .date(let date):
-            return date.description
-        case .structure(let structure):
-            // Convert to JSON string for complex types
-            if let data = try? JSONSerialization.data(withJSONObject: structure.mapValues { $0.toAny() }),
-               let jsonString = String(data: data, encoding: .utf8) {
-                return jsonString
-            }
-            return structure.description
-        case .list(let list):
-            // Convert to JSON string for complex types
-            let arrayDict = list.map { $0.toAny() }
-            if let data = try? JSONSerialization.data(withJSONObject: arrayDict),
-               let jsonString = String(data: data, encoding: .utf8) {
-                return jsonString
-            }
-            return list.description
-        case .null:
-            return ""
-        }
-    }
-    
-    /// Converts OpenFeature Value to dictionary with special handling for non-dictionary types
-    func toDictionary() -> [String: Any] {
-        switch self {
-        case .structure(let structure):
-            return structure.mapValues { $0.toAny() }
-        case .list(let list):
-            return ["_list": list.map { $0.toAny() }]
-        default:
-            return ["_value": self.toAny()]
-        }
-    }
-}
-
-// MARK: - DatadogFlags Context Extensions
-extension FlagsEvaluationContext {
-    /// Creates a FlagsEvaluationContext from an OpenFeature EvaluationContext
-    init(_ context: EvaluationContext) {
-        let targetingKey = context.getTargetingKey()
-        
-        var attributes: [String: String] = [:]
-        for (key, value) in context.asMap() {
-            // DatadogFlags only supports String attributes
-            attributes[key] = value.toString()
-        }
-        
-        self.init(targetingKey: targetingKey, attributes: attributes)
-    }
-}
