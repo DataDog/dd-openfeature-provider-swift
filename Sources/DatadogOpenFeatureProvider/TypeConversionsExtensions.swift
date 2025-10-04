@@ -81,21 +81,6 @@ extension AnyValue {
         }
     }
     
-    /// Converts AnyValue to dictionary with special handling for non-dictionary types
-    func toDictionary() -> [String: Any] {
-        switch self {
-        case .dictionary(let structure):
-            var result: [String: Any] = [:]
-            for (key, value) in structure {
-                result[key] = value.toAny()
-            }
-            return result
-        case .array(let list):
-            return ["_list": list.map { $0.toAny() }]
-        default:
-            return ["_value": self.toAny()]
-        }
-    }
 }
 
 // MARK: - Value Extensions (OpenFeature → Swift/DatadogFlags)
@@ -177,17 +162,6 @@ extension Value {
         }
     }
     
-    /// Converts OpenFeature Value to dictionary with special handling for non-dictionary types
-    func toDictionary() -> [String: Any] {
-        switch self {
-        case .structure(let structure):
-            return structure.mapValues { $0.toAny() }
-        case .list(let list):
-            return ["_list": list.map { $0.toAny() }]
-        default:
-            return ["_value": self.toAny()]
-        }
-    }
 }
 
 // MARK: - FlagsEvaluationContext Extensions
