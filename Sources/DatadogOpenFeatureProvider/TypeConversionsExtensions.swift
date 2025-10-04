@@ -57,15 +57,6 @@ extension AnyValue {
         }
     }
     
-    /// Creates an AnyValue from a dictionary
-    init(_ dictionary: [String: Any]) {
-        var structure: [String: AnyValue] = [:]
-        for (key, value) in dictionary {
-            structure[key] = AnyValue(value)
-        }
-        self = .dictionary(structure)
-    }
-    
     /// Converts AnyValue to Swift Any type
     func toAny() -> Any {
         switch self {
