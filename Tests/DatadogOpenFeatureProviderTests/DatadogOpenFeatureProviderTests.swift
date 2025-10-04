@@ -7,7 +7,7 @@ import DatadogInternal
 
 
 @Test func testBooleanEvaluation() async throws {
-    let mockFlagsClient = MockDatadogFlagsClient()
+    let mockFlagsClient = DatadogFlagsClientMock()
     mockFlagsClient.setupFlag(key: "test-flag", value: AnyValue.bool(true), variant: "test-variant", reason: "test-reason")
     
     let provider = DatadogProvider(flagsClient: mockFlagsClient)
@@ -19,7 +19,7 @@ import DatadogInternal
 }
 
 @Test func testStringEvaluation() async throws {
-    let mockFlagsClient = MockDatadogFlagsClient()
+    let mockFlagsClient = DatadogFlagsClientMock()
     mockFlagsClient.setupFlag(key: "test-flag", value: AnyValue.string("test-value"), variant: "test-variant", reason: "test-reason")
     
     let provider = DatadogProvider(flagsClient: mockFlagsClient)
@@ -31,7 +31,7 @@ import DatadogInternal
 }
 
 @Test func testIntegerEvaluation() async throws {
-    let mockFlagsClient = MockDatadogFlagsClient()
+    let mockFlagsClient = DatadogFlagsClientMock()
     mockFlagsClient.setupFlag(key: "test-flag", value: AnyValue.int(42), variant: "test-variant", reason: "test-reason")
     
     let provider = DatadogProvider(flagsClient: mockFlagsClient)
@@ -43,7 +43,7 @@ import DatadogInternal
 }
 
 @Test func testDoubleEvaluation() async throws {
-    let mockFlagsClient = MockDatadogFlagsClient()
+    let mockFlagsClient = DatadogFlagsClientMock()
     mockFlagsClient.setupFlag(key: "test-flag", value: AnyValue.double(3.14), variant: "test-variant", reason: "test-reason")
     
     let provider = DatadogProvider(flagsClient: mockFlagsClient)
@@ -55,14 +55,14 @@ import DatadogInternal
 }
 
 @Test func testProviderMetadata() async throws {
-    let mockFlagsClient = MockDatadogFlagsClient()
+    let mockFlagsClient = DatadogFlagsClientMock()
     let provider = DatadogProvider(flagsClient: mockFlagsClient)
     
     #expect(provider.metadata.name == "datadog")
 }
 
 @Test func testProviderFactory() async throws {
-    let mockFlagsClient = MockDatadogFlagsClient()
+    let mockFlagsClient = DatadogFlagsClientMock()
     let provider = DatadogProvider(flagsClient: mockFlagsClient)
     
     #expect(provider.metadata.name == "datadog")
@@ -131,7 +131,7 @@ import DatadogInternal
 }
 
 @Test func testDirectProviderIntegration() async throws {
-    let mockFlagsClient = MockDatadogFlagsClient()
+    let mockFlagsClient = DatadogFlagsClientMock()
     mockFlagsClient.setupFlag(key: "test-bool", value: AnyValue.bool(true), variant: "on", reason: "targeting_match")
     
     let provider = DatadogProvider(flagsClient: mockFlagsClient)
@@ -188,7 +188,7 @@ import DatadogInternal
 }
 
 @Test func testDatadogProviderDirect() async throws {
-    let mockFlagsClient = MockDatadogFlagsClient()
+    let mockFlagsClient = DatadogFlagsClientMock()
     let provider = DatadogProvider(flagsClient: mockFlagsClient)
     
     #expect(provider.metadata.name == "datadog")
@@ -206,7 +206,7 @@ import DatadogInternal
 }
 
 @Test func testContextConversionAndAsyncOperations() async throws {
-    let mockFlagsClient = MockDatadogFlagsClient()
+    let mockFlagsClient = DatadogFlagsClientMock()
     let provider = DatadogProvider(flagsClient: mockFlagsClient)
     
     let context = ImmutableContext(
@@ -224,7 +224,7 @@ import DatadogInternal
 }
 
 @Test func testMetadataPopulation() async throws {
-    let mockFlagsClient = MockDatadogFlagsClient()
+    let mockFlagsClient = DatadogFlagsClientMock()
     mockFlagsClient.setupFlag(key: "test-flag", value: AnyValue.bool(true), variant: "on", reason: "targeting_match")
     
     let provider = DatadogProvider(flagsClient: mockFlagsClient)
@@ -274,12 +274,17 @@ import DatadogInternal
 
 // MARK: - Mock DatadogFlags Client for Testing
 
-class MockDatadogFlagsClient: FlagsClientProtocol {
+class DatadogFlagsClientMock: FlagsClientProtocol {
     private var flags: [String: (value: AnyValue, variant: String?, reason: String?)] = [:]
     var lastSetContext: FlagsEvaluationContext?
     
     func setupFlag(key: String, value: AnyValue, variant: String? = nil, reason: String? = nil) {
         flags[key] = (value: value, variant: variant, reason: reason)
+    }
+    
+    func setEvaluationContext(_ context: FlagsEvaluationContext, completion: @escaping (Result<Void, FlagsError>) -> Void) {
+        lastSetContext = context
+        completion(.success(()))
     }
     
     func getDetails<T>(key: String, defaultValue: T) -> FlagDetails<T> where T: Equatable, T: FlagValue {
@@ -301,51 +306,6 @@ class MockDatadogFlagsClient: FlagsClientProtocol {
             reason: "default",
             error: nil
         )
-    }
-    
-    func getBooleanDetails(key: String, defaultValue: Bool) -> FlagDetails<Bool> {
-        return getDetails(key: key, defaultValue: defaultValue)
-    }
-    
-    func getStringDetails(key: String, defaultValue: String) -> FlagDetails<String> {
-        return getDetails(key: key, defaultValue: defaultValue)
-    }
-    
-    func getIntegerDetails(key: String, defaultValue: Int) -> FlagDetails<Int> {
-        return getDetails(key: key, defaultValue: defaultValue)
-    }
-    
-    func getDoubleDetails(key: String, defaultValue: Double) -> FlagDetails<Double> {
-        return getDetails(key: key, defaultValue: defaultValue)
-    }
-    
-    func getObjectDetails(key: String, defaultValue: AnyValue) -> FlagDetails<AnyValue> {
-        return getDetails(key: key, defaultValue: defaultValue)
-    }
-    
-    func getBooleanValue(key: String, defaultValue: Bool) -> Bool {
-        return getBooleanDetails(key: key, defaultValue: defaultValue).value
-    }
-    
-    func getStringValue(key: String, defaultValue: String) -> String {
-        return getStringDetails(key: key, defaultValue: defaultValue).value
-    }
-    
-    func getIntegerValue(key: String, defaultValue: Int) -> Int {
-        return getIntegerDetails(key: key, defaultValue: defaultValue).value
-    }
-    
-    func getDoubleValue(key: String, defaultValue: Double) -> Double {
-        return getDoubleDetails(key: key, defaultValue: defaultValue).value
-    }
-    
-    func getObjectValue(key: String, defaultValue: AnyValue) -> AnyValue {
-        return getObjectDetails(key: key, defaultValue: defaultValue).value
-    }
-    
-    func setEvaluationContext(_ context: FlagsEvaluationContext, completion: @escaping (Result<Void, FlagsError>) -> Void) {
-        lastSetContext = context
-        completion(.success(()))
     }
     
     private func convertAnyValueToType<T>(_ anyValue: AnyValue, as type: T.Type) -> T? {
