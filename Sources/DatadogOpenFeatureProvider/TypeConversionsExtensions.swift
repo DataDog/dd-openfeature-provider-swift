@@ -36,7 +36,7 @@ extension AnyValue {
     
     /// Creates an AnyValue from OpenFeature Value
     /// Direct conversion without intermediate steps
-    init(_ value: Value) {
+    init(_ value: Value) throws {
         switch value {
         case .boolean(let bool):
             self = .bool(bool)
@@ -46,13 +46,12 @@ extension AnyValue {
             self = .int(Int(int))
         case .double(let double):
             self = .double(double)
-        case .date(let date):
-            let formatter = ISO8601DateFormatter()
-            self = .string(formatter.string(from: date))
+        case .date:
+            throw OpenFeatureError.valueNotConvertableError
         case .structure(let structure):
-            self = .dictionary(structure.mapValues { AnyValue($0) })
+            self = .dictionary(try structure.mapValues { try AnyValue($0) })
         case .list(let list):
-            self = .array(list.map { AnyValue($0) })
+            self = .array(try list.map { try AnyValue($0) })
         case .null:
             self = .null
         }

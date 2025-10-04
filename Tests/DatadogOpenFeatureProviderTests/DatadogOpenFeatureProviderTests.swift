@@ -95,22 +95,22 @@ import DatadogInternal
 @Test func testValueToAnyValueConversion() async throws {
     // Test boolean conversion
     let boolValue = Value.boolean(true)
-    let boolAnyValue = AnyValue(boolValue)
+    let boolAnyValue = try AnyValue(boolValue)
     #expect(boolAnyValue == .bool(true))
     
     // Test string conversion
     let stringValue = Value.string("test")
-    let stringAnyValue = AnyValue(stringValue)
+    let stringAnyValue = try AnyValue(stringValue)
     #expect(stringAnyValue == .string("test"))
     
     // Test integer conversion
     let intValue = Value.integer(42)
-    let intAnyValue = AnyValue(intValue)
+    let intAnyValue = try AnyValue(intValue)
     #expect(intAnyValue == .int(42))
     
     // Test double conversion
     let doubleValue = Value.double(3.14)
-    let doubleAnyValue = AnyValue(doubleValue)
+    let doubleAnyValue = try AnyValue(doubleValue)
     #expect(doubleAnyValue == .double(3.14))
 }
 
@@ -178,6 +178,15 @@ import DatadogInternal
     
     #expect(mockFlagsClient.lastSetContext != nil)
     #expect(mockFlagsClient.lastSetContext?.targetingKey == "user123")
+}
+
+@Test func testDateConversionThrowsError() async throws {
+    // Test that converting Date values throws valueNotConvertableError
+    let dateValue = Value.date(Date())
+    
+    #expect(throws: OpenFeatureError.valueNotConvertableError) {
+        _ = try AnyValue(dateValue)
+    }
 }
 
 @Test func testEmptyMetadata() async throws {

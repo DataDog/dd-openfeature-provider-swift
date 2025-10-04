@@ -81,7 +81,7 @@ public class DatadogProvider: FeatureProvider {
     }
     
     public func getObjectEvaluation(key: String, defaultValue: Value, context: EvaluationContext?) throws -> ProviderEvaluation<Value> {
-        let defaultAnyValue = AnyValue(defaultValue)
+        let defaultAnyValue = try AnyValue(defaultValue)
         let details = flagsClient.getObjectDetails(key: key, defaultValue: defaultAnyValue)
         return ProviderEvaluation(details, flagKey: key, context: context)
     }
