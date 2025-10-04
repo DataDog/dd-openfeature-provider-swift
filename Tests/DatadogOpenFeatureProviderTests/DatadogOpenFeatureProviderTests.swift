@@ -143,49 +143,6 @@ import DatadogInternal
     #expect(result.reason == "targeting_match")
 }
 
-@Test func testFlagMetadataBuilder() async throws {
-    let context = ImmutableContext(
-        targetingKey: "user123",
-        structure: ImmutableStructure(attributes: [
-            "email": Value.string("test@example.com"),
-            "age": Value.integer(30),
-            "premium": Value.boolean(true)
-        ])
-    )
-    
-    let metadata = FlagMetadataBuilder.create(flagKey: "test-flag", context: context)
-    
-    // Test required metadata fields
-    #expect(metadata["flagKey"]?.asString() == "test-flag")
-    #expect(metadata["provider"]?.asString() == "DatadogFlags")
-    #expect(metadata["targetingKey"]?.asString() == "user123")
-    #expect(metadata["evaluationTime"] != nil)
-    
-    // Test context attribute conversion
-    #expect(metadata["email"]?.asString() == "test@example.com")
-    #expect(metadata["age"]?.asInteger() == 30)
-    #expect(metadata["premium"]?.asBoolean() == true)
-    
-    // Test that evaluationTime is a valid ISO8601 string
-    if let evaluationTime = metadata["evaluationTime"]?.asString() {
-        let formatter = ISO8601DateFormatter()
-        let date = formatter.date(from: evaluationTime)
-        #expect(date != nil)
-    }
-}
-
-@Test func testFlagMetadataBuilderWithNilContext() async throws {
-    let metadata = FlagMetadataBuilder.create(flagKey: "test-flag", context: nil)
-    
-    // Test required metadata fields are present
-    #expect(metadata["flagKey"]?.asString() == "test-flag")
-    #expect(metadata["provider"]?.asString() == "DatadogFlags")
-    #expect(metadata["evaluationTime"] != nil)
-    
-    // Test that context-specific fields are not present
-    #expect(metadata["targetingKey"] == nil)
-    #expect(metadata.count == 3) // Only flagKey, provider, evaluationTime
-}
 
 @Test func testDatadogProviderDirect() async throws {
     let mockFlagsClient = DatadogFlagsClientMock()
@@ -223,7 +180,7 @@ import DatadogInternal
     #expect(mockFlagsClient.lastSetContext?.targetingKey == "user123")
 }
 
-@Test func testMetadataPopulation() async throws {
+@Test func testEmptyMetadata() async throws {
     let mockFlagsClient = DatadogFlagsClientMock()
     mockFlagsClient.setupFlag(key: "test-flag", value: AnyValue.bool(true), variant: "on", reason: "targeting_match")
     
@@ -245,31 +202,8 @@ import DatadogInternal
     #expect(result.variant == "on")
     #expect(result.reason == "targeting_match")
     
-    // Verify metadata is populated
-    #expect(result.flagMetadata.count > 0)
-    
-    // Check that metadata contains expected keys
-    let metadataKeys = result.flagMetadata.keys
-    #expect(metadataKeys.contains("flagKey"))
-    #expect(metadataKeys.contains("provider"))
-    #expect(metadataKeys.contains("evaluationTime"))
-    #expect(metadataKeys.contains("targetingKey"))
-    #expect(metadataKeys.contains("segment"))
-    #expect(metadataKeys.contains("plan"))
-    
-    // Check metadata values
-    #expect(result.flagMetadata["flagKey"]?.asString() == "test-flag")
-    #expect(result.flagMetadata["provider"]?.asString() == "DatadogFlags")
-    #expect(result.flagMetadata["targetingKey"]?.asString() == "user456")
-    #expect(result.flagMetadata["segment"]?.asString() == "beta")
-    #expect(result.flagMetadata["plan"]?.asString() == "pro")
-    
-    // Check that evaluationTime is a valid ISO 8601 timestamp
-    if let evaluationTime = result.flagMetadata["evaluationTime"]?.asString() {
-        let formatter = ISO8601DateFormatter()
-        let date = formatter.date(from: evaluationTime)
-        #expect(date != nil)
-    }
+    // Verify metadata is empty as expected
+    #expect(result.flagMetadata.isEmpty)
 }
 
 // MARK: - Mock DatadogFlags Client for Testing

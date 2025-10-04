@@ -225,7 +225,7 @@ extension ProviderEvaluation where T == Bool {
     init(_ details: FlagDetails<Bool>, flagKey: String, context: EvaluationContext?) {
         self.init(
             value: details.value,
-            flagMetadata: FlagMetadataBuilder.create(flagKey: flagKey, context: context),
+            flagMetadata: [:],
             variant: details.variant,
             reason: details.reason
         )
@@ -237,7 +237,7 @@ extension ProviderEvaluation where T == String {
     init(_ details: FlagDetails<String>, flagKey: String, context: EvaluationContext?) {
         self.init(
             value: details.value,
-            flagMetadata: FlagMetadataBuilder.create(flagKey: flagKey, context: context),
+            flagMetadata: [:],
             variant: details.variant,
             reason: details.reason
         )
@@ -249,7 +249,7 @@ extension ProviderEvaluation where T == Double {
     init(_ details: FlagDetails<Double>, flagKey: String, context: EvaluationContext?) {
         self.init(
             value: details.value,
-            flagMetadata: FlagMetadataBuilder.create(flagKey: flagKey, context: context),
+            flagMetadata: [:],
             variant: details.variant,
             reason: details.reason
         )
@@ -262,7 +262,7 @@ extension ProviderEvaluation where T == Int64 {
     init(_ details: FlagDetails<Int>, flagKey: String, context: EvaluationContext?) {
         self.init(
             value: Int64(details.value),
-            flagMetadata: FlagMetadataBuilder.create(flagKey: flagKey, context: context),
+            flagMetadata: [:],
             variant: details.variant,
             reason: details.reason
         )
@@ -275,71 +275,10 @@ extension ProviderEvaluation where T == Value {
     init(_ details: FlagDetails<AnyValue>, flagKey: String, context: EvaluationContext?) {
         self.init(
             value: Value(details.value),
-            flagMetadata: FlagMetadataBuilder.create(flagKey: flagKey, context: context),
+            flagMetadata: [:],
             variant: details.variant,
             reason: details.reason
         )
     }
 }
 
-// MARK: - Flag Metadata Utilities
-
-/// Utility for creating flag evaluation metadata
-enum FlagMetadataBuilder {
-    private static let iso8601Formatter = ISO8601DateFormatter()
-    
-    /// Creates metadata for flag evaluations
-    /// Includes provider info, timing, and context data
-    /// Returns ready-to-use FlagMetadataValue dictionary
-    static func create(flagKey: String, context: EvaluationContext?) -> [String: FlagMetadataValue] {
-        var metadata: [String: FlagMetadataValue] = [:]
-        
-        // Add flag key for debugging/tracing
-        metadata["flagKey"] = .string(flagKey)
-        
-        // Add provider information
-        metadata["provider"] = .string("DatadogFlags")
-        
-        // Add evaluation timestamp
-        metadata["evaluationTime"] = .string(iso8601Formatter.string(from: Date()))
-        
-        // Extract context information if available
-        if let context = context {
-            // Add targeting key if present
-            let targetingKey = context.getTargetingKey()
-            metadata["targetingKey"] = .string(targetingKey)
-            
-            // Add all context attributes converted to appropriate FlagMetadataValue types
-            for (key, value) in context.asMap() {
-                if key != "targetingKey" { // Avoid duplication
-                    if let metadataValue = convertToFlagMetadataValue(value) {
-                        metadata[key] = metadataValue
-                    }
-                }
-            }
-        }
-        
-        return metadata
-    }
-    
-    /// Converts OpenFeature Value to FlagMetadataValue
-    private static func convertToFlagMetadataValue(_ value: Value) -> FlagMetadataValue? {
-        switch value {
-        case .boolean(let bool):
-            return .boolean(bool)
-        case .string(let string):
-            return .string(string)
-        case .integer(let int):
-            return .integer(int)
-        case .double(let double):
-            return .double(double)
-        case .date(let date):
-            return .string(date.description)
-        case .structure, .list:
-            // For complex types, convert to JSON string
-            return .string(value.toString())
-        case .null:
-            return nil // Don't include null values in metadata
-        }
-    }
-}
