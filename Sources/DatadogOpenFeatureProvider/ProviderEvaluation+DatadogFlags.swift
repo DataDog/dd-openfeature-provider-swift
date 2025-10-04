@@ -4,9 +4,33 @@ import OpenFeature
 
 // MARK: - ProviderEvaluation Extensions
 
-extension ProviderEvaluation where T: FlagValue & Equatable {
-    /// Creates ProviderEvaluation from DatadogFlags FlagDetails for direct value types (Bool, String, Double)
-    init(_ details: FlagDetails<T>, flagKey: String, context: EvaluationContext?) {
+extension ProviderEvaluation where T == Bool {
+    /// Creates ProviderEvaluation<Bool> from DatadogFlags FlagDetails<Bool>
+    init(_ details: FlagDetails<Bool>, flagKey: String, context: EvaluationContext?) {
+        self.init(
+            value: details.value,
+            flagMetadata: [:],
+            variant: details.variant,
+            reason: details.reason
+        )
+    }
+}
+
+extension ProviderEvaluation where T == String {
+    /// Creates ProviderEvaluation<String> from DatadogFlags FlagDetails<String>
+    init(_ details: FlagDetails<String>, flagKey: String, context: EvaluationContext?) {
+        self.init(
+            value: details.value,
+            flagMetadata: [:],
+            variant: details.variant,
+            reason: details.reason
+        )
+    }
+}
+
+extension ProviderEvaluation where T == Double {
+    /// Creates ProviderEvaluation<Double> from DatadogFlags FlagDetails<Double>
+    init(_ details: FlagDetails<Double>, flagKey: String, context: EvaluationContext?) {
         self.init(
             value: details.value,
             flagMetadata: [:],
