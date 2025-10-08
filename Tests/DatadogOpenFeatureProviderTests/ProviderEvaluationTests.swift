@@ -21,7 +21,7 @@ struct BasicProviderEvaluationTests {
         )
         
         // When
-        let evaluation = ProviderEvaluation(flagDetails, flagKey: "test-bool", context: nil)
+        let evaluation = ProviderEvaluation(flagDetails)
         
         // Then
         #expect(evaluation.value == true)
@@ -40,7 +40,7 @@ struct BasicProviderEvaluationTests {
             error: nil
         )
         
-        let evaluation = ProviderEvaluation(flagDetails, flagKey: "test-string", context: nil)
+        let evaluation = ProviderEvaluation(flagDetails)
         
         #expect(evaluation.value == "feature-enabled")
         #expect(evaluation.variant == "variation-a")
@@ -58,7 +58,7 @@ struct BasicProviderEvaluationTests {
             error: nil
         )
         
-        let evaluation = ProviderEvaluation(flagDetails, flagKey: "test-double", context: nil)
+        let evaluation = ProviderEvaluation(flagDetails)
         
         #expect(evaluation.value == 42.5)
         #expect(evaluation.variant == "high")
@@ -76,7 +76,7 @@ struct BasicProviderEvaluationTests {
             error: nil
         )
         
-        let evaluation: ProviderEvaluation<Int64> = ProviderEvaluation(flagDetails, flagKey: "test-int", context: nil)
+        let evaluation: ProviderEvaluation<Int64> = ProviderEvaluation(flagDetails)
         
         #expect(evaluation.value == Int64(1000))
         #expect(evaluation.variant == "large")
@@ -94,7 +94,7 @@ struct BasicProviderEvaluationTests {
             error: nil
         )
         
-        let evaluation: ProviderEvaluation<Int64> = ProviderEvaluation(flagDetails, flagKey: "large-number", context: nil)
+        let evaluation: ProviderEvaluation<Int64> = ProviderEvaluation(flagDetails)
         
         #expect(evaluation.value == Int64(Int.max))
         #expect(evaluation.variant == "maximum")
@@ -122,7 +122,7 @@ struct ComplexValueEvaluationTests {
             error: nil
         )
         
-        let evaluation: ProviderEvaluation<Value> = ProviderEvaluation(flagDetails, flagKey: "test-object", context: nil)
+        let evaluation: ProviderEvaluation<Value> = ProviderEvaluation(flagDetails)
         
         if case .structure(let structure) = evaluation.value {
             #expect(structure["feature"] == Value.string("advanced"))
@@ -164,7 +164,7 @@ struct ComplexValueEvaluationTests {
             error: nil
         )
         
-        let evaluation: ProviderEvaluation<Value> = ProviderEvaluation(flagDetails, flagKey: "app-config", context: nil)
+        let evaluation: ProviderEvaluation<Value> = ProviderEvaluation(flagDetails)
         
         if case .structure(let structure) = evaluation.value {
             // Check config section
@@ -216,7 +216,7 @@ struct ProviderEvaluationEdgeCaseTests {
             error: nil
         )
         
-        let evaluation = ProviderEvaluation(flagDetails, flagKey: "simple-flag", context: nil)
+        let evaluation = ProviderEvaluation(flagDetails)
         
         #expect(evaluation.value == false)
         #expect(evaluation.variant == nil)
@@ -226,7 +226,9 @@ struct ProviderEvaluationEdgeCaseTests {
 
     @Test("Evaluation with context")
     func providerEvaluationWithContext() async throws {
-        let context = ImmutableContext(
+        // Note: Context is created but not passed to ProviderEvaluation since
+        // it's handled at a higher level in the OpenFeature architecture
+        let _ = ImmutableContext(
             targetingKey: "user123",
             structure: ImmutableStructure(attributes: [
                 "plan": Value.string("premium"),
@@ -242,14 +244,11 @@ struct ProviderEvaluationEdgeCaseTests {
             error: nil
         )
         
-        let evaluation = ProviderEvaluation(flagDetails, flagKey: "premium-feature", context: context)
+        let evaluation = ProviderEvaluation(flagDetails)
         
         #expect(evaluation.value == "enabled")
         #expect(evaluation.variant == "premium-variant")
         #expect(evaluation.reason == "user_segment")
         #expect(evaluation.flagMetadata.isEmpty)
-        
-        // Note: The context parameter is passed but not currently used in the initializer
-        // This test documents the current behavior
     }
 }
