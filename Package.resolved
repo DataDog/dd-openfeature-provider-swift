@@ -6,7 +6,7 @@
       "location" : "https://github.com/DataDog/dd-sdk-ios.git",
       "state" : {
         "branch" : "feature/flags",
-        "revision" : "bdeb878f2c9df619906968dc68b8c41aab3c4d5f"
+        "revision" : "465914090b054eabc9bc7c4d79810d2c683cf7ab"
       }
     },
     {

@@ -21,8 +21,8 @@ import DatadogFlags
     
     // Then
     #expect(flagsContext.targetingKey == "user123")
-    #expect(flagsContext.attributes["email"] == "test@example.com")
-    #expect(flagsContext.attributes["age"] == "25") // Should be converted to string
+    #expect(flagsContext.attributes["email"] == AnyValue.string("test@example.com"))
+    #expect(flagsContext.attributes["age"] == AnyValue.int(25)) // Preserved as integer
 }
 
 @Test func testContextWithNoTargetingKey() async throws {
@@ -36,8 +36,8 @@ import DatadogFlags
     let flagsContext = FlagsEvaluationContext(context)
     
     #expect(flagsContext.targetingKey == "")
-    #expect(flagsContext.attributes["region"] == "us-west-2")
-    #expect(flagsContext.attributes["plan"] == "premium")
+    #expect(flagsContext.attributes["region"] == AnyValue.string("us-west-2"))
+    #expect(flagsContext.attributes["plan"] == AnyValue.string("premium"))
 }
 
 @Test func testContextWithEmptyAttributes() async throws {
@@ -77,30 +77,36 @@ import DatadogFlags
     
     #expect(flagsContext.targetingKey == "user789")
     
-    // All values should be converted to strings
-    #expect(flagsContext.attributes["string"] == "text")
-    #expect(flagsContext.attributes["integer"] == "42")
-    #expect(flagsContext.attributes["double"] == "3.14")
-    #expect(flagsContext.attributes["boolean"] == "true")
-    #expect(flagsContext.attributes["null"] == "")
+    // All values should be preserved with their original types
+    #expect(flagsContext.attributes["string"] == AnyValue.string("text"))
+    #expect(flagsContext.attributes["integer"] == AnyValue.int(42))
+    #expect(flagsContext.attributes["double"] == AnyValue.double(3.14))
+    #expect(flagsContext.attributes["boolean"] == AnyValue.bool(true))
+    #expect(flagsContext.attributes["null"] == AnyValue.null)
     
-    // Date should be converted to string representation
-    let dateString = flagsContext.attributes["date"]
-    #expect(dateString != nil)
-    #expect(dateString!.contains("2021"))
+    // Date should be converted to string representation (fallback)
+    let dateValue = flagsContext.attributes["date"]
+    #expect(dateValue != nil)
+    if case .string(let dateString) = dateValue! {
+        #expect(dateString.contains("2021"))
+    }
     
-    // Complex types should be JSON serialized
-    let structureString = flagsContext.attributes["structure"]
-    #expect(structureString != nil)
-    #expect(structureString!.contains("nested"))
-    #expect(structureString!.contains("value"))
-    #expect(structureString!.contains("count"))
-    #expect(structureString!.contains("10"))
+    // Complex types should be preserved as dictionaries
+    let structureValue = flagsContext.attributes["structure"]
+    #expect(structureValue != nil)
+    if case .dictionary(let dict) = structureValue! {
+        #expect(dict["nested"] == AnyValue.string("value"))
+        #expect(dict["count"] == AnyValue.int(10))
+    }
     
-    let listString = flagsContext.attributes["list"]
-    #expect(listString != nil)
-    #expect(listString!.contains("item1"))
-    #expect(listString!.contains("item2"))
+    // Arrays should be preserved as arrays
+    let listValue = flagsContext.attributes["list"]
+    #expect(listValue != nil)
+    if case .array(let array) = listValue! {
+        #expect(array.count == 2)
+        #expect(array[0] == AnyValue.string("item1"))
+        #expect(array[1] == AnyValue.string("item2"))
+    }
 }
 
 @Test func testContextWithSpecialCharacters() async throws {
@@ -117,10 +123,10 @@ import DatadogFlags
     let flagsContext = FlagsEvaluationContext(context)
     
     #expect(flagsContext.targetingKey == "user-special_123")
-    #expect(flagsContext.attributes["email"] == "user+test@example.com")
-    #expect(flagsContext.attributes["name"] == "José María")
-    #expect(flagsContext.attributes["description"] == "Line 1\nLine 2\tTabbed")
-    #expect(flagsContext.attributes["json"] == "{\"key\": \"value\"}")
+    #expect(flagsContext.attributes["email"] == AnyValue.string("user+test@example.com"))
+    #expect(flagsContext.attributes["name"] == AnyValue.string("José María"))
+    #expect(flagsContext.attributes["description"] == AnyValue.string("Line 1\nLine 2\tTabbed"))
+    #expect(flagsContext.attributes["json"] == AnyValue.string("{\"key\": \"value\"}"))
 }
 
 @Test func testContextWithLargeNumbers() async throws {
@@ -139,14 +145,14 @@ import DatadogFlags
     let flagsContext = FlagsEvaluationContext(context)
     
     #expect(flagsContext.targetingKey == "user_numbers")
-    #expect(flagsContext.attributes["maxInt64"] == String(Int64.max))
-    #expect(flagsContext.attributes["minInt64"] == String(Int64.min))
-    #expect(flagsContext.attributes["zero"] == "0")
+    #expect(flagsContext.attributes["maxInt64"] == AnyValue.int(Int(Int64.max)))
+    #expect(flagsContext.attributes["minInt64"] == AnyValue.int(Int(Int64.min)))
+    #expect(flagsContext.attributes["zero"] == AnyValue.int(0))
     
-    // Check that large/small doubles are converted
-    #expect(flagsContext.attributes["largeDouble"] != nil)
-    #expect(flagsContext.attributes["smallDouble"] != nil)
-    #expect(flagsContext.attributes["negativeDouble"] == "-999.999")
+    // Check that large/small doubles are preserved as doubles
+    #expect(flagsContext.attributes["largeDouble"] == AnyValue.double(Double.greatestFiniteMagnitude))
+    #expect(flagsContext.attributes["smallDouble"] == AnyValue.double(Double.leastNonzeroMagnitude))
+    #expect(flagsContext.attributes["negativeDouble"] == AnyValue.double(-999.999))
 }
 
 @Test func testContextAttributeEdgeCases() async throws {
@@ -164,11 +170,13 @@ import DatadogFlags
     let flagsContext = FlagsEvaluationContext(context)
     
     #expect(flagsContext.targetingKey == "edge_cases")
-    #expect(flagsContext.attributes["empty_string"] == "")
-    #expect(flagsContext.attributes["whitespace"] == "   ")
-    #expect(flagsContext.attributes["newlines"] == "\n\n\n")
-    #expect(flagsContext.attributes["unicode"] == "🎉 Hello 世界 🌍")
-    #expect(flagsContext.attributes["very_long"]?.count == 1000)
+    #expect(flagsContext.attributes["empty_string"] == AnyValue.string(""))
+    #expect(flagsContext.attributes["whitespace"] == AnyValue.string("   "))
+    #expect(flagsContext.attributes["newlines"] == AnyValue.string("\n\n\n"))
+    #expect(flagsContext.attributes["unicode"] == AnyValue.string("🎉 Hello 世界 🌍"))
+    if case .string(let longString) = flagsContext.attributes["very_long"]! {
+        #expect(longString.count == 1000)
+    }
 }
 
 @Test func testContextWithNestedStructures() async throws {
@@ -200,14 +208,24 @@ import DatadogFlags
     
     #expect(flagsContext.targetingKey == "nested_user")
     
-    // Complex nested structure should be serialized to JSON string
-    let profileString = flagsContext.attributes["profile"]
-    #expect(profileString != nil)
-    #expect(profileString!.contains("John"))
-    #expect(profileString!.contains("Doe"))
-    #expect(profileString!.contains("30"))
-    #expect(profileString!.contains("dark"))
-    #expect(profileString!.contains("email"))
-    #expect(profileString!.contains("push"))
-    #expect(profileString!.contains("sms"))
+    // Complex nested structure should be preserved as nested dictionaries
+    let profileValue = flagsContext.attributes["profile"]
+    #expect(profileValue != nil)
+    if case .dictionary(let profile) = profileValue! {
+        if case .dictionary(let personal) = profile["personal"]! {
+            if case .dictionary(let name) = personal["name"]! {
+                #expect(name["first"] == AnyValue.string("John"))
+                #expect(name["last"] == AnyValue.string("Doe"))
+            }
+            #expect(personal["age"] == AnyValue.int(30))
+        }
+        if case .dictionary(let settings) = profile["settings"]! {
+            #expect(settings["theme"] == AnyValue.string("dark"))
+            if case .array(let notifications) = settings["notifications"]! {
+                #expect(notifications.contains(AnyValue.string("email")))
+                #expect(notifications.contains(AnyValue.string("push")))
+                #expect(notifications.contains(AnyValue.string("sms")))
+            }
+        }
+    }
 }

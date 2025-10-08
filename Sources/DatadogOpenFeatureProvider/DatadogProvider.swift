@@ -12,10 +12,9 @@ public class DatadogProvider: FeatureProvider {
     
     public init(
         name: String = FlagsClient.defaultName,
-        configuration: FlagsClient.Configuration = .init(),
         core: DatadogCoreProtocol = CoreRegistry.default
     ) {
-        self.flagsClient = FlagsClient.create(name: name, with: configuration, in: core)
+        self.flagsClient = FlagsClient.create(name: name, in: core)
         self.metadata = DatadogProviderMetadata()
     }
     
