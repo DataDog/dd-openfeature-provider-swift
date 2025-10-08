@@ -21,7 +21,7 @@ struct BasicContextConversionTests {
         )
         
         // When
-        let flagsContext = FlagsEvaluationContext(context)
+        let flagsContext = try FlagsEvaluationContext(context)
         
         // Then
         #expect(flagsContext.targetingKey == "user123")
@@ -38,7 +38,7 @@ struct BasicContextConversionTests {
             ])
         )
         
-        let flagsContext = FlagsEvaluationContext(context)
+        let flagsContext = try FlagsEvaluationContext(context)
         
         #expect(flagsContext.targetingKey == "")
         #expect(flagsContext.attributes["region"] == AnyValue.string("us-west-2"))
@@ -52,7 +52,7 @@ struct BasicContextConversionTests {
             structure: ImmutableStructure(attributes: [:])
         )
         
-        let flagsContext = FlagsEvaluationContext(context)
+        let flagsContext = try FlagsEvaluationContext(context)
         
         #expect(flagsContext.targetingKey == "user456")
         #expect(flagsContext.attributes.isEmpty)
@@ -71,7 +71,6 @@ struct TypeConversionTests {
                 "integer": Value.integer(42),
                 "double": Value.double(3.14),
                 "boolean": Value.boolean(true),
-                "date": Value.date(Date(timeIntervalSince1970: 1609459200)), // 2021-01-01
                 "null": Value.null,
                 "structure": Value.structure([
                     "nested": Value.string("value"),
@@ -84,7 +83,7 @@ struct TypeConversionTests {
             ])
         )
         
-        let flagsContext = FlagsEvaluationContext(context)
+        let flagsContext = try FlagsEvaluationContext(context)
         
         #expect(flagsContext.targetingKey == "user789")
         
@@ -94,13 +93,6 @@ struct TypeConversionTests {
         #expect(flagsContext.attributes["double"] == AnyValue.double(3.14))
         #expect(flagsContext.attributes["boolean"] == AnyValue.bool(true))
         #expect(flagsContext.attributes["null"] == AnyValue.null)
-        
-        // Date should be converted to string representation (fallback)
-        let dateValue = flagsContext.attributes["date"]
-        #expect(dateValue != nil)
-        if case .string(let dateString) = dateValue! {
-            #expect(dateString.contains("2021"))
-        }
         
         // Complex types should be preserved as dictionaries
         let structureValue = flagsContext.attributes["structure"]
@@ -120,6 +112,21 @@ struct TypeConversionTests {
         }
     }
 
+    @Test("Context with date should throw error")
+    func contextWithDateShouldThrow() async throws {
+        let context = ImmutableContext(
+            targetingKey: "user_with_date",
+            structure: ImmutableStructure(attributes: [
+                "date": Value.date(Date(timeIntervalSince1970: 1609459200)) // 2021-01-01
+            ])
+        )
+        
+        // Date conversion should now throw an error instead of falling back to string
+        #expect(throws: OpenFeatureError.valueNotConvertableError) {
+            _ = try FlagsEvaluationContext(context)
+        }
+    }
+
     @Test("Large numbers and numeric edge cases")
     func contextWithLargeNumbers() async throws {
         let context = ImmutableContext(
@@ -134,7 +141,7 @@ struct TypeConversionTests {
             ])
         )
         
-        let flagsContext = FlagsEvaluationContext(context)
+        let flagsContext = try FlagsEvaluationContext(context)
         
         #expect(flagsContext.targetingKey == "user_numbers")
         #expect(flagsContext.attributes["maxInt64"] == AnyValue.int(Int(Int64.max)))
@@ -173,7 +180,7 @@ struct TypeConversionTests {
             ])
         )
         
-        let flagsContext = FlagsEvaluationContext(context)
+        let flagsContext = try FlagsEvaluationContext(context)
         
         #expect(flagsContext.targetingKey == "nested_user")
         
@@ -215,7 +222,7 @@ struct StringHandlingTests {
             ])
         )
         
-        let flagsContext = FlagsEvaluationContext(context)
+        let flagsContext = try FlagsEvaluationContext(context)
         
         #expect(flagsContext.targetingKey == "user-special_123")
         #expect(flagsContext.attributes["email"] == AnyValue.string("user+test@example.com"))
@@ -237,7 +244,7 @@ struct StringHandlingTests {
             ])
         )
         
-        let flagsContext = FlagsEvaluationContext(context)
+        let flagsContext = try FlagsEvaluationContext(context)
         
         #expect(flagsContext.targetingKey == "edge_cases")
         #expect(flagsContext.attributes["empty_string"] == AnyValue.string(""))

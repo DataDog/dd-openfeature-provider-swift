@@ -27,7 +27,7 @@ public class DatadogProvider: FeatureProvider {
     public func initialize(initialContext: EvaluationContext?) async throws {
         
         if let context = initialContext {
-            let ddContext = FlagsEvaluationContext(context)
+            let ddContext = try FlagsEvaluationContext(context)
             // Set the context using completion handler
             return try await withCheckedThrowingContinuation { continuation in
                 flagsClient.setEvaluationContext(ddContext) { result in
@@ -44,7 +44,7 @@ public class DatadogProvider: FeatureProvider {
     
     public func onContextSet(oldContext: EvaluationContext?, newContext: EvaluationContext) async throws {
         
-        let ddContext = FlagsEvaluationContext(newContext)
+        let ddContext = try FlagsEvaluationContext(newContext)
         // Set the context using completion handler
         return try await withCheckedThrowingContinuation { continuation in
             flagsClient.setEvaluationContext(ddContext) { result in

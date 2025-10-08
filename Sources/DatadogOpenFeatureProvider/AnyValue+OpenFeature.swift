@@ -57,27 +57,4 @@ extension AnyValue {
         }
     }
     
-    /// Converts AnyValue to Swift Any type
-    func toAny() -> Any {
-        switch self {
-        case .bool(let bool):
-            return bool
-        case .string(let string):
-            return string
-        case .int(let int):
-            return int
-        case .double(let double):
-            return double
-        case .dictionary(let structure):
-            var result: [String: Any] = [:]
-            for (key, value) in structure {
-                result[key] = value.toAny()
-            }
-            return result
-        case .array(let list):
-            return list.map { $0.toAny() }
-        case .null:
-            return NSNull()
-        }
-    }
 }
