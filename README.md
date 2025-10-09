@@ -71,6 +71,21 @@ swift test
 xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=iOS Simulator,name=iPhone 16" test
 ```
 
+### Code Linting
+
+This project uses [SwiftLint](https://github.com/realm/SwiftLint) to enforce Swift style and conventions.
+
+```bash
+# Install SwiftLint (if not already installed)
+brew install swiftlint
+
+# Run SwiftLint
+swiftlint lint
+
+# Auto-fix violations where possible
+swiftlint lint --fix
+```
+
 ### Platform Testing
 
 ```bash
@@ -177,14 +192,22 @@ let flagValue = client.getBooleanValue(key: "my-feature-flag", defaultValue: fal
    swift test
    ```
 
-3. **Format code** (if using SwiftFormat):
+3. **Run SwiftLint to ensure code quality:**
    ```bash
-   swiftformat .
+   # Install SwiftLint if needed
+   brew install swiftlint
+   
+   # Check for violations
+   swiftlint lint
+   
+   # Auto-fix where possible
+   swiftlint lint --fix
    ```
 
 ### CI/CD
 
 This repository includes GitHub Actions workflows that:
+- Run SwiftLint to enforce code quality and style
 - Test on multiple Swift versions (5.9, 5.10, 6.0)
 - Test on multiple platforms (iOS, macOS, tvOS, watchOS)
 - Run on both Ubuntu and macOS runners
