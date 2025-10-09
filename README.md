@@ -192,17 +192,7 @@ let flagValue = client.getBooleanValue(key: "my-feature-flag", defaultValue: fal
    swift test
    ```
 
-3. **Run SwiftLint to ensure code quality:**
-   ```bash
-   # Install SwiftLint if needed
-   brew install swiftlint
-   
-   # Check for violations
-   swiftlint lint
-   
-   # Auto-fix where possible
-   swiftlint lint --fix
-   ```
+3. **Run SwiftLint:** See [Code Linting](#code-linting) section above for installation and usage.
 
 ### CI/CD
 
