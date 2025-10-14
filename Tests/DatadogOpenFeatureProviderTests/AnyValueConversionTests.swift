@@ -8,7 +8,6 @@ import DatadogFlags
 
 @Suite("AnyValue to Value Conversion")
 struct AnyValueToValueTests {
-    
     @Test("Primitive type conversions")
     func primitiveConversions() async throws {
         // Given
@@ -17,14 +16,14 @@ struct AnyValueToValueTests {
         let intAnyValue = AnyValue.int(42)
         let doubleAnyValue = AnyValue.double(3.14)
         let nullAnyValue = AnyValue.null
-        
+
         // When
         let boolValue = Value(boolAnyValue)
         let stringValue = Value(stringAnyValue)
         let intValue = Value(intAnyValue)
         let doubleValue = Value(doubleAnyValue)
         let nullValue = Value(nullAnyValue)
-        
+
         // Then
         #expect(boolValue == .boolean(true))
         #expect(stringValue == .string("test"))
@@ -39,12 +38,12 @@ struct AnyValueToValueTests {
         let dictAnyValue = AnyValue.dictionary([
             "name": AnyValue.string("John"),
             "age": AnyValue.int(30),
-            "active": AnyValue.bool(true)
+            "active": AnyValue.bool(true),
         ])
-        
+
         // When
         let dictValue = Value(dictAnyValue)
-        
+
         // Then
         if case .structure(let structure) = dictValue {
             #expect(structure["name"] == .string("John"))
@@ -61,10 +60,10 @@ struct AnyValueToValueTests {
         let arrayAnyValue = AnyValue.array([
             AnyValue.string("item1"),
             AnyValue.int(42),
-            AnyValue.bool(false)
+            AnyValue.bool(false),
         ])
         let arrayValue = Value(arrayAnyValue)
-        
+
         if case .list(let list) = arrayValue {
             #expect(list.count == 3)
             #expect(list[0] == .string("item1"))
@@ -83,17 +82,17 @@ struct AnyValueToValueTests {
                 "id": AnyValue.int(123),
                 "profile": AnyValue.dictionary([
                     "name": AnyValue.string("Alice"),
-                    "verified": AnyValue.bool(true)
-                ])
+                    "verified": AnyValue.bool(true),
+                ]),
             ]),
             "tags": AnyValue.array([
                 AnyValue.string("premium"),
-                AnyValue.string("beta")
-            ])
+                AnyValue.string("beta"),
+            ]),
         ])
-        
+
         let nestedValue = Value(nestedAnyValue)
-        
+
         if case .structure(let structure) = nestedValue {
             if case .structure(let user) = structure["user"] {
                 #expect(user["id"] == .integer(123))
@@ -106,7 +105,7 @@ struct AnyValueToValueTests {
             } else {
                 #expect(Bool(false), "Expected user structure")
             }
-            
+
             if case .list(let tags) = structure["tags"] {
                 #expect(tags.count == 2)
                 #expect(tags[0] == .string("premium"))
@@ -122,17 +121,16 @@ struct AnyValueToValueTests {
 
 @Suite("AnyValue Fallback Behavior")
 struct AnyValueFallbackTests {
-    
     @Test("Unsupported type fallback to string")
     func fallbackConversion() async throws {
         // Test conversion of unsupported types falls back to string description
         struct CustomType {
             let value: String
         }
-        
+
         let customValue = CustomType(value: "test")
         let anyValue = AnyValue(customValue)
-        
+
         // Should fall back to string description
         if case .string(let description) = anyValue {
             #expect(description.contains("CustomType"))

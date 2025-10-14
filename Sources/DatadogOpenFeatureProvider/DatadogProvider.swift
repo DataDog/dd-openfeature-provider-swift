@@ -7,9 +7,9 @@ import DatadogInternal
 public class DatadogProvider: FeatureProvider {
     public let hooks: [any Hook] = []
     public let metadata: ProviderMetadata
-    
+
     private let flagsClient: FlagsClientProtocol
-    
+
     public init(
         name: String = FlagsClient.defaultName,
         core: DatadogCoreProtocol = CoreRegistry.default
@@ -17,7 +17,7 @@ public class DatadogProvider: FeatureProvider {
         self.flagsClient = FlagsClient.create(name: name, in: core)
         self.metadata = DatadogProviderMetadata()
     }
-    
+
     /// Internal initializer for testing purposes only
     internal init(flagsClient: FlagsClientProtocol) {
         self.flagsClient = flagsClient
@@ -25,7 +25,6 @@ public class DatadogProvider: FeatureProvider {
     }
 
     public func initialize(initialContext: EvaluationContext?) async throws {
-        
         if let context = initialContext {
             let ddContext = try FlagsEvaluationContext(context)
             // Set the context using completion handler
@@ -43,7 +42,6 @@ public class DatadogProvider: FeatureProvider {
     }
 
     public func onContextSet(oldContext: EvaluationContext?, newContext: EvaluationContext) async throws {
-        
         let ddContext = try FlagsEvaluationContext(newContext)
         // Set the context using completion handler
         return try await withCheckedThrowingContinuation { continuation in
@@ -84,7 +82,6 @@ public class DatadogProvider: FeatureProvider {
         let details = flagsClient.getObjectDetails(key: key, defaultValue: defaultAnyValue)
         return ProviderEvaluation(details)
     }
-    
 }
 
 struct DatadogProviderMetadata: ProviderMetadata {

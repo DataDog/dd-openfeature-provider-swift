@@ -8,7 +8,6 @@ import DatadogFlags
 
 @Suite("Value to AnyValue Conversion")
 struct ValueToAnyValueTests {
-    
     @Test("Primitive type conversions")
     func primitiveConversions() async throws {
         // Given
@@ -17,14 +16,14 @@ struct ValueToAnyValueTests {
         let intValue = Value.integer(42)
         let doubleValue = Value.double(3.14)
         let nullValue = Value.null
-        
+
         // When
         let boolAnyValue = try AnyValue(boolValue)
         let stringAnyValue = try AnyValue(stringValue)
         let intAnyValue = try AnyValue(intValue)
         let doubleAnyValue = try AnyValue(doubleValue)
         let nullAnyValue = try AnyValue(nullValue)
-        
+
         // Then
         #expect(boolAnyValue == .bool(true))
         #expect(stringAnyValue == .string("test"))
@@ -40,11 +39,11 @@ struct ValueToAnyValueTests {
             "name": Value.string("Alice"),
             "age": Value.integer(25),
             "active": Value.boolean(true),
-            "score": Value.double(95.5)
+            "score": Value.double(95.5),
         ])
-        
+
         let structAnyValue = try AnyValue(structValue)
-        
+
         if case .dictionary(let dict) = structAnyValue {
             #expect(dict["name"] == .string("Alice"))
             #expect(dict["age"] == .int(25))
@@ -62,11 +61,11 @@ struct ValueToAnyValueTests {
             Value.string("first"),
             Value.integer(123),
             Value.boolean(false),
-            Value.double(2.718)
+            Value.double(2.718),
         ])
-        
+
         let listAnyValue = try AnyValue(listValue)
-        
+
         if case .array(let array) = listAnyValue {
             #expect(array.count == 4)
             #expect(array[0] == .string("first"))
@@ -86,17 +85,17 @@ struct ValueToAnyValueTests {
                 "id": Value.integer(999),
                 "details": Value.structure([
                     "firstName": Value.string("Bob"),
-                    "isAdmin": Value.boolean(true)
-                ])
+                    "isAdmin": Value.boolean(true),
+                ]),
             ]),
             "preferences": Value.list([
                 Value.string("notifications"),
-                Value.string("darkMode")
-            ])
+                Value.string("darkMode"),
+            ]),
         ])
-        
+
         let nestedAnyValue = try AnyValue(nestedValue)
-        
+
         if case .dictionary(let dict) = nestedAnyValue {
             if case .dictionary(let user) = dict["user"] {
                 #expect(user["id"] == .int(999))
@@ -109,7 +108,7 @@ struct ValueToAnyValueTests {
             } else {
                 #expect(Bool(false), "Expected user dictionary")
             }
-            
+
             if case .array(let preferences) = dict["preferences"] {
                 #expect(preferences.count == 2)
                 #expect(preferences[0] == .string("notifications"))
@@ -126,7 +125,7 @@ struct ValueToAnyValueTests {
     func dateConversionThrowsError() async throws {
         // Given
         let dateValue = Value.date(Date())
-        
+
         // When & Then
         #expect(throws: OpenFeatureError.valueNotConvertableError) {
             _ = try AnyValue(dateValue)
@@ -135,10 +134,8 @@ struct ValueToAnyValueTests {
 }
 
 
-
 @Suite("Round-trip Conversions")
 struct RoundTripConversionTests {
-    
     @Test("AnyValue to Value and back")
     func roundTripConversions() async throws {
         // Test AnyValue → Value → AnyValue round-trip
@@ -151,31 +148,31 @@ struct RoundTripConversionTests {
             ]),
             "array": AnyValue.array([
                 AnyValue.string("a"),
-                AnyValue.string("b")
-            ])
+                AnyValue.string("b"),
+            ]),
         ])
-        
+
         // Convert to Value and back
         let value = Value(originalAnyValue)
         let roundTripAnyValue = try AnyValue(value)
-        
+
         if case .dictionary(let original) = originalAnyValue,
-           case .dictionary(let roundTrip) = roundTripAnyValue {
+            case .dictionary(let roundTrip) = roundTripAnyValue {
             #expect(original["string"] == roundTrip["string"])
             #expect(original["number"] == roundTrip["number"])
             #expect(original["boolean"] == roundTrip["boolean"])
-            
+
             // Check nested structure
             if case .dictionary(let originalNested) = original["nested"],
-               case .dictionary(let roundTripNested) = roundTrip["nested"] {
+                case .dictionary(let roundTripNested) = roundTrip["nested"] {
                 #expect(originalNested["inner"] == roundTripNested["inner"])
             } else {
                 #expect(Bool(false), "Nested structure lost in round-trip")
             }
-            
+
             // Check array
             if case .array(let originalArray) = original["array"],
-               case .array(let roundTripArray) = roundTrip["array"] {
+                case .array(let roundTripArray) = roundTrip["array"] {
                 #expect(originalArray.count == roundTripArray.count)
                 #expect(originalArray[0] == roundTripArray[0])
                 #expect(originalArray[1] == roundTripArray[1])
