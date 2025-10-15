@@ -1,0 +1,3 @@
+# Global code owners - Feature Flags
+
+* @DataDog/feature-flagging @DataDog/rum-mobile-ios 
