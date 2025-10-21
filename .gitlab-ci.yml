@@ -10,10 +10,10 @@ variables:
   DEFAULT_IOS_OS: "18.3.1"
   DEFAULT_TVOS_OS: "18.2"
 
-# default:
-#   tags:
-#     - macos:sonoma
-#     - specific:true
+default:
+  tags:
+    - macos:sonoma
+    - specific:true
 
 # ┌───────────────┐
 # │ Utility jobs: │
@@ -31,22 +31,6 @@ variables:
           - "Package.swift"
           - "Makefile"
           - ".gitlab-ci.yml"
-
-# ┌──────────────────────────┐
-# │ Runner access test:      │
-# └──────────────────────────┘
-
-Test runner access:
-  stage: pre
-  script:
-    - echo "Testing GitLab runner access"
-    - echo "Runner info:"
-    - uname -a
-    - echo "Available tools:"
-    - which git || echo "git not found"
-    - which swift || echo "swift not found" 
-    - which xcodebuild || echo "xcodebuild not found"
-    - echo "Runner access test completed"
 
 # ┌──────────────────────────┐
 # │ Environment validation:  │
