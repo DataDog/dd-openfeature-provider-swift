@@ -7,7 +7,7 @@ import DatadogFlags
 // MARK: - ProviderEvaluation Creation Tests
 
 @Suite("Basic ProviderEvaluation Creation")
-struct BasicProviderEvaluationTests {
+internal struct BasicProviderEvaluationTests {
     @Test("Boolean evaluation creation")
     func booleanProviderEvaluationCreation() async throws {
         // Given
@@ -69,7 +69,7 @@ struct BasicProviderEvaluationTests {
     func int64ProviderEvaluationCreation() async throws {
         let flagDetails = FlagDetails<Int>(
             key: "test-int",
-            value: 1000,
+            value: 1_000,
             variant: "large",
             reason: "default",
             error: nil
@@ -77,7 +77,7 @@ struct BasicProviderEvaluationTests {
 
         let evaluation: ProviderEvaluation<Int64> = ProviderEvaluation(flagDetails)
 
-        #expect(evaluation.value == Int64(1000))
+        #expect(evaluation.value == Int64(1_000))
         #expect(evaluation.variant == "large")
         #expect(evaluation.reason == "default")
         #expect(evaluation.flagMetadata.isEmpty)
@@ -103,7 +103,7 @@ struct BasicProviderEvaluationTests {
 }
 
 @Suite("Complex Value ProviderEvaluation")
-struct ComplexValueEvaluationTests {
+internal struct ComplexValueEvaluationTests {
     @Test("Simple object evaluation creation")
     func valueProviderEvaluationCreation() async throws {
         let anyValue = AnyValue.dictionary([
@@ -202,7 +202,7 @@ struct ComplexValueEvaluationTests {
 }
 
 @Suite("ProviderEvaluation Edge Cases")
-struct ProviderEvaluationEdgeCaseTests {
+internal struct ProviderEvaluationEdgeCaseTests {
     @Test("Evaluation with nil variant and reason")
     func providerEvaluationWithNilVariantAndReason() async throws {
         let flagDetails = FlagDetails<Bool>(

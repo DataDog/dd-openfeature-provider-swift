@@ -8,7 +8,7 @@ import DatadogInternal
 // MARK: - DatadogProvider Integration Tests
 
 @Suite("DatadogProvider Flag Evaluation")
-struct FlagEvaluationTests {
+internal struct FlagEvaluationTests {
     @Test("Boolean flag evaluation")
     func booleanEvaluation() async throws {
         // Given
@@ -80,7 +80,7 @@ struct FlagEvaluationTests {
 }
 
 @Suite("DatadogProvider Metadata & Configuration")
-struct ProviderMetadataTests {
+internal struct ProviderMetadataTests {
     @Test("Provider metadata")
     func providerMetadata() async throws {
         let mockFlagsClient = DatadogFlagsClientMock()
@@ -138,7 +138,7 @@ struct ProviderMetadataTests {
 }
 
 @Suite("DatadogProvider Context Management")
-struct ContextManagementTests {
+internal struct ContextManagementTests {
     @Test("Provider initialization with context")
     func providerInitializationWithContext() async throws {
         // Given

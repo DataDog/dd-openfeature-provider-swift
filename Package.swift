@@ -3,7 +3,7 @@
 
 import PackageDescription
 
-let package = Package(
+public let package = Package(
     name: "DatadogOpenFeatureProvider",
     platforms: [
         .iOS(.v14),
@@ -14,7 +14,8 @@ let package = Package(
     products: [
         .library(
             name: "DatadogOpenFeatureProvider",
-            targets: ["DatadogOpenFeatureProvider"]),
+            targets: ["DatadogOpenFeatureProvider"]
+        ),
     ],
     dependencies: [
         .package(url: "https://github.com/open-feature/swift-sdk.git", from: "0.1.0"),
@@ -26,7 +27,8 @@ let package = Package(
             dependencies: [
                 .product(name: "DatadogFlags", package: "dd-sdk-ios"),
                 .product(name: "OpenFeature", package: "swift-sdk"),
-            ]),
+            ]
+        ),
         .testTarget(
             name: "DatadogOpenFeatureProviderTests",
             dependencies: [

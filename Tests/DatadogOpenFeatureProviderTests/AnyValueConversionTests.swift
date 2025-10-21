@@ -7,7 +7,7 @@ import DatadogFlags
 // MARK: - AnyValue Conversion Tests (DatadogFlags → OpenFeature)
 
 @Suite("AnyValue to Value Conversion")
-struct AnyValueToValueTests {
+internal struct AnyValueToValueTests {
     @Test("Primitive type conversions")
     func primitiveConversions() async throws {
         // Given
@@ -120,7 +120,7 @@ struct AnyValueToValueTests {
 }
 
 @Suite("AnyValue Fallback Behavior")
-struct AnyValueFallbackTests {
+internal struct AnyValueFallbackTests {
     @Test("Unsupported type fallback to string")
     func fallbackConversion() async throws {
         // Test conversion of unsupported types falls back to string description

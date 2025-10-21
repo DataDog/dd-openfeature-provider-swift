@@ -84,7 +84,7 @@ public class DatadogProvider: FeatureProvider {
     }
 }
 
-struct DatadogProviderMetadata: ProviderMetadata {
+internal struct DatadogProviderMetadata: ProviderMetadata {
     let name: String? = "datadog"
 }
 

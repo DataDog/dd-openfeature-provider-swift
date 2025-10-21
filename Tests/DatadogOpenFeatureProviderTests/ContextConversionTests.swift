@@ -7,7 +7,7 @@ import DatadogFlags
 // MARK: - Context Conversion Tests (OpenFeature → DatadogFlags)
 
 @Suite("Basic Context Conversion")
-struct BasicContextConversionTests {
+internal struct BasicContextConversionTests {
     @Test("Basic context with targeting key and attributes")
     func basicContextConversion() async throws {
         // Given
@@ -59,7 +59,7 @@ struct BasicContextConversionTests {
 }
 
 @Suite("Type Preservation and Complex Types")
-struct TypeConversionTests {
+internal struct TypeConversionTests {
     @Test("Complex attribute types with type preservation")
     func contextWithComplexAttributeTypes() async throws {
         let context = ImmutableContext(
@@ -115,7 +115,7 @@ struct TypeConversionTests {
         let context = ImmutableContext(
             targetingKey: "user_with_date",
             structure: ImmutableStructure(attributes: [
-                "date": Value.date(Date(timeIntervalSince1970: 1609459200)) // 2021-01-01
+                "date": Value.date(Date(timeIntervalSince1970: 1_609_459_200)) // 2021-01-01
             ])
         )
 
@@ -206,7 +206,7 @@ struct TypeConversionTests {
 }
 
 @Suite("String Edge Cases and Special Characters")
-struct StringHandlingTests {
+internal struct StringHandlingTests {
     @Test("Special characters and encoding")
     func contextWithSpecialCharacters() async throws {
         let context = ImmutableContext(
@@ -237,7 +237,7 @@ struct StringHandlingTests {
                 "whitespace": Value.string("   "),
                 "newlines": Value.string("\n\n\n"),
                 "unicode": Value.string("🎉 Hello 世界 🌍"),
-                "very_long": Value.string(String(repeating: "x", count: 1000)),
+                "very_long": Value.string(String(repeating: "x", count: 1_000)),
             ])
         )
 
@@ -249,7 +249,7 @@ struct StringHandlingTests {
         #expect(flagsContext.attributes["newlines"] == AnyValue.string("\n\n\n"))
         #expect(flagsContext.attributes["unicode"] == AnyValue.string("🎉 Hello 世界 🌍"))
         if case .string(let longString) = flagsContext.attributes["very_long"] {
-            #expect(longString.count == 1000)
+            #expect(longString.count == 1_000)
         }
     }
 }

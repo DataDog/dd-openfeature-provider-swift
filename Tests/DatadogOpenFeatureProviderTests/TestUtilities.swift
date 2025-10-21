@@ -5,7 +5,7 @@ import DatadogFlags
 // MARK: - Shared Test Utilities
 
 /// Mock DatadogFlags Client for Testing
-class DatadogFlagsClientMock: FlagsClientProtocol {
+internal class DatadogFlagsClientMock: FlagsClientProtocol {
     private struct FlagData {
         let value: AnyValue
         let variant: String?

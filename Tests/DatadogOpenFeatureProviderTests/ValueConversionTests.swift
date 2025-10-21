@@ -7,7 +7,7 @@ import DatadogFlags
 // MARK: - Value Conversion Tests (OpenFeature → DatadogFlags)
 
 @Suite("Value to AnyValue Conversion")
-struct ValueToAnyValueTests {
+internal struct ValueToAnyValueTests {
     @Test("Primitive type conversions")
     func primitiveConversions() async throws {
         // Given
@@ -133,9 +133,8 @@ struct ValueToAnyValueTests {
     }
 }
 
-
 @Suite("Round-trip Conversions")
-struct RoundTripConversionTests {
+internal struct RoundTripConversionTests {
     @Test("AnyValue to Value and back")
     func roundTripConversions() async throws {
         // Test AnyValue → Value → AnyValue round-trip
