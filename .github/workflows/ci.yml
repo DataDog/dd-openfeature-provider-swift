@@ -36,10 +36,10 @@ jobs:
           ${{ runner.os }}-spm-
     
     - name: Build
-      run: swift build -v
+      run: make spm-build
     
     - name: Run tests
-      run: swift test -v
+      run: make test
   
   ios-test:
     name: iOS Test
