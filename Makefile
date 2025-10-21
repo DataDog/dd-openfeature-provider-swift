@@ -1,11 +1,15 @@
 all: lint
-.PHONY: lint clean test spm-build help
+.PHONY: env-check lint clean test spm-build help
 
 REPO_ROOT := $(PWD)
 include tools/utils/common.mk
 
 # Default ENV for setting up the repo
 DEFAULT_ENV := dev
+
+env-check:
+	@$(ECHO_TITLE) "make env-check"
+	./tools/env-check.sh
 
 lint:
 	@$(ECHO_TITLE) "make lint"
@@ -26,6 +30,7 @@ clean:
 
 help:
 	@echo "Available targets:"
+	@echo "  env-check - Check environment and tool versions"
 	@echo "  lint      - Run SwiftLint on source and test files"
 	@echo "  test      - Run Swift tests"
 	@echo "  spm-build - Build with Swift Package Manager"

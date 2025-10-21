@@ -222,12 +222,19 @@ let flagValue = client.getBooleanValue(key: "my-feature-flag", defaultValue: fal
 
 ### CI/CD
 
-This repository includes GitHub Actions workflows that:
-- Run SwiftLint to enforce code quality and style
-- Test on multiple Swift versions (5.9, 5.10, 6.0)
-- Test on multiple platforms (iOS, macOS, tvOS, watchOS)
-- Run on both Ubuntu and macOS runners
-- Cache dependencies for faster builds
+This repository uses GitLab CI for automated testing:
+- Environment validation and tool checking
+- SwiftLint enforcement
+- Unit tests using Swift Package Manager
+- Multi-platform builds (iOS, macOS, tvOS, watchOS)
+
+Local development commands mirror the CI pipeline:
+```bash
+make env-check  # Environment validation
+make lint       # Code quality checks
+make test       # Unit tests
+make spm-build  # Package builds
+```
 
 ## License
 
