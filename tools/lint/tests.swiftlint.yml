@@ -41,7 +41,7 @@ only_rules: # we enable lint rules explicitly - only the ones listed below are a
   - number_separator
   - opening_brace
   - operator_usage_whitespace
-  - function_name_whitespace
+  - operator_whitespace
   - redundant_discardable_let
   - redundant_type_annotation
   - redundant_void_return
