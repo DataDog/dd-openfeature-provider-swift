@@ -1,88 +1,33 @@
-# Welcome
+# Contributing
 
-Welcome! We are glad you are interested in contributing to dd-openfeature-provider-swift. This guide will help you understand the requirements and guidelines to improve your contributor experience.
+First of all, thanks for contributing!
 
-## Contributing to code
+This document provides some basic guidelines for contributing to this repository.
+To propose improvements, feel free to submit a PR or open an Issue.
 
-### New features
+**Note:** Datadog requires that all commits to this repository be signed, including those within external contribution PRs. Please ensure you have followed GitHub's [Signing Commits](https://docs.github.com/en/authentication/managing-commit-signature-verification/signing-commits) guide before proposing a contribution. PRs lacking signed commits will not be processed and may be rejected.
 
-If you want to contribute with a new feature, before start writing any code, you will need to get your proposal accepted by the maintainers. This is to avoid going through the effort of writing the code and getting it rejected because it is already being worked on in a different way, or it is outside the scope of the project.
+## Have a feature request or idea?
 
-Open a new issue with the title "[RFC] Title of your proposal". In the description explain carefully why you think this feature is needed, why it is useful, and how you plan to implement it. We recommend to use the RFC issue template we provide.
+Many great ideas for new features come from the community, and we'd be happy to consider yours 👍.
 
-The maintainers will label the issue as `type/feature` or `type/major_change` and `rfc/discussion` and will start a conversation with you to discuss it. If the proposal gets accepted it will be tagged as `rfc/approved`. Feel free to start coding at that point and propose a PR, linking it to the issue.
+To share your idea or request, [open a GitHub Issue](https://github.com/DataDog/dd-openfeature-provider-swift/issues/new/choose) using dedicated issue template.
 
-During the RFC process, your change proposal, alongside with implementation approaches, will get discussed with the maintainers, ensuring that you don't waste time with wrong approaches or features that are out of scope for the project.
+## Found a bug?
 
-If, after the discussion, the proposal gets rejected, the team will give you an explanation, label the issue as `rfc/rejected` and close the issue.
+For any urgent matters (such as outages) or issues concerning the Datadog service or UI, contact our support team through https://docs.datadoghq.com/help/ for direct assistance.
 
-### Bug fixes
+You may submit a bug report concerning the Datadog's OpenFeature provider for iOS by [opening a GitHub issue](https://github.com/DataDog/dd-openfeature-provider-swift/issues/new/choose). Use appropriate template and provide all listed details to help us resolve the issue.
 
-If you have identified an issue that is already labeled as `type/bug` that hasn't been assigned to anyone, feel free to claim it, and ask a maintainer to add you as assignee.
-Once you have some code ready, open a PR, [linking it to the issue](https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue#manually-linking-a-pull-request-to-an-issue-using-the-pull-request-sidebar). Take into account that if the changes to fix the bug are not trivial, you need to follow the RFC process as well to discuss the options with the maintainers.
+## Have a patch?
 
-### Signing the CLA
+We welcome all code contributions to the library. If you have a patch adding value to the SDK, let us know 💪! Before you [submit a Pull Request](https://github.com/DataDog/dd-openfeature-provider-swift/pull/new/), make sure that you first create an Issue to explain the bug or the feature your patch covers, then make sure similar Issue or PR doesn't already exist.
 
-This repository requires you to sign the Contributor License Agreement. Please ensure you have followed GitHub's [Signing Commits](https://docs.github.com/en/authentication/managing-commit-signature-verification/signing-commits) guide before proposing a contribution. PRs lacking signed commits will not be processed and may be rejected.
+Your Pull Request will be run through our CI pipeline, and a project member will review the changes with you. At a minimum, to be accepted and merged, Pull Requests must:
 
-### Setting up your development environment
+- have a stated goal and detailed description of the changes made;
+- include thorough test coverage and documentation, where applicable;
+- pass all tests and code quality checks in CI;
+- receive at least one approval from a project member with push permissions.
 
-#### Prerequisites
-
-1. **Install Xcode 15.0+** from the Mac App Store or Apple Developer portal
-2. **Verify Xcode Command Line Tools** are installed:
-   ```bash
-   xcode-select --install
-   ```
-3. **Swift 5.9+** (included with Xcode)
-
-#### Development Setup
-
-1. **Clone and set up:**
-   ```bash
-   git clone https://github.com/DataDog/dd-openfeature-provider-swift.git
-   cd dd-openfeature-provider-swift
-   swift package resolve
-   ```
-
-2. **Build the package:**
-   ```bash
-   swift build
-   ```
-
-### Testing your changes
-
-```bash
-# Run all tests
-swift test
-
-# Run tests for specific platform (requires Xcode)
-xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=iOS Simulator,name=iPhone 16" test
-```
-
-Test on different platforms to ensure compatibility:
-
-```bash
-# iOS
-xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=iOS Simulator,name=iPhone 16" build
-
-# macOS
-xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=macOS,arch=arm64" build
-
-# tvOS
-xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=tvOS Simulator,name=Apple TV" build
-```
-
-## Contributing to issues
-
-### Contributing to reporting bugs
-
-If you think you have found a bug in dd-openfeature-provider-swift feel free to report it. When creating issues, you will be presented with a template to fill. Please, fill as much as you can from that template, including steps to reproduce your issue, so we can address it quicker.
-
-### Contributing to triaging issues
-
-Triaging issues is a great way to contribute to an open source project. Some actions you can perform on an open by someone else issue that will help addressing it sooner:
-
-- Trying to reproduce the issue. If you can reproduce the issue following the steps the reporter provided, add a comment specifying that you could reproduce the issue.
-- Finding duplicates. If there is a bug, there might be a chance that it was already reported in a different issue. If you find an already reported issue that is the same one as the one you are triaging, add a comment with "Duplicate of" followed by the issue number of the original one.
-- Asking the reporter for more information if needed. Sometimes the reporter of an issue doesn't include enough information to work on the fix, i.e. lack of steps to reproduce, not specifying the affected version, etc. If you find a bug that doesn't have enough information, add a comment tagging the reporter asking for the missing information.
+Make sure that your code is clean and readable, your commits are small and atomic, and that each commit has a clear message.
