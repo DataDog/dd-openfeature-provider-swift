@@ -3,7 +3,7 @@
 
 import PackageDescription
 
-public let package = Package(
+let package = Package(
     name: "DatadogOpenFeatureProvider",
     platforms: [
         .iOS(.v14),
