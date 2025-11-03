@@ -2,11 +2,7 @@
 
 ## Overview
 
-This package provides a bridge between [OpenFeature](https://openfeature.dev/)'s vendor-neutral feature flag API and Datadog's flagging client, allowing applications to:
-
-- Use OpenFeature's standardized feature flag interface
-- Leverage Datadog's precomputed assignments services
-- Support all OpenFeature flag types: Boolean, String, Integer, Double, Object
+This package provides a bridge between [OpenFeature](https://openfeature.dev/) and Datadog feature flags, allowing applications to use OpenFeature's standardized interface with Datadog's feature flagging services running under the hood.
 
 ## Requirements
 
