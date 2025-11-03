@@ -7,8 +7,7 @@ import DatadogFlags
 // MARK: - ProviderEvaluation Creation Tests
 
 @Suite("Basic ProviderEvaluation Creation")
-struct BasicProviderEvaluationTests {
-    
+internal struct BasicProviderEvaluationTests {
     @Test("Boolean evaluation creation")
     func booleanProviderEvaluationCreation() async throws {
         // Given
@@ -19,10 +18,10 @@ struct BasicProviderEvaluationTests {
             reason: "targeting_match",
             error: nil
         )
-        
+
         // When
         let evaluation = ProviderEvaluation(flagDetails)
-        
+
         // Then
         #expect(evaluation.value == true)
         #expect(evaluation.variant == "enabled")
@@ -39,9 +38,9 @@ struct BasicProviderEvaluationTests {
             reason: "rule_match",
             error: nil
         )
-        
+
         let evaluation = ProviderEvaluation(flagDetails)
-        
+
         #expect(evaluation.value == "feature-enabled")
         #expect(evaluation.variant == "variation-a")
         #expect(evaluation.reason == "rule_match")
@@ -57,9 +56,9 @@ struct BasicProviderEvaluationTests {
             reason: "percentage_rollout",
             error: nil
         )
-        
+
         let evaluation = ProviderEvaluation(flagDetails)
-        
+
         #expect(evaluation.value == 42.5)
         #expect(evaluation.variant == "high")
         #expect(evaluation.reason == "percentage_rollout")
@@ -70,15 +69,15 @@ struct BasicProviderEvaluationTests {
     func int64ProviderEvaluationCreation() async throws {
         let flagDetails = FlagDetails<Int>(
             key: "test-int",
-            value: 1000,
+            value: 1_000,
             variant: "large",
             reason: "default",
             error: nil
         )
-        
+
         let evaluation: ProviderEvaluation<Int64> = ProviderEvaluation(flagDetails)
-        
-        #expect(evaluation.value == Int64(1000))
+
+        #expect(evaluation.value == Int64(1_000))
         #expect(evaluation.variant == "large")
         #expect(evaluation.reason == "default")
         #expect(evaluation.flagMetadata.isEmpty)
@@ -93,9 +92,9 @@ struct BasicProviderEvaluationTests {
             reason: "boundary_test",
             error: nil
         )
-        
+
         let evaluation: ProviderEvaluation<Int64> = ProviderEvaluation(flagDetails)
-        
+
         #expect(evaluation.value == Int64(Int.max))
         #expect(evaluation.variant == "maximum")
         #expect(evaluation.reason == "boundary_test")
@@ -104,16 +103,15 @@ struct BasicProviderEvaluationTests {
 }
 
 @Suite("Complex Value ProviderEvaluation")
-struct ComplexValueEvaluationTests {
-    
+internal struct ComplexValueEvaluationTests {
     @Test("Simple object evaluation creation")
     func valueProviderEvaluationCreation() async throws {
         let anyValue = AnyValue.dictionary([
             "feature": AnyValue.string("advanced"),
             "level": AnyValue.int(3),
-            "enabled": AnyValue.bool(true)
+            "enabled": AnyValue.bool(true),
         ])
-        
+
         let flagDetails = FlagDetails<AnyValue>(
             key: "test-object",
             value: anyValue,
@@ -121,9 +119,9 @@ struct ComplexValueEvaluationTests {
             reason: "experiment",
             error: nil
         )
-        
+
         let evaluation: ProviderEvaluation<Value> = ProviderEvaluation(flagDetails)
-        
+
         if case .structure(let structure) = evaluation.value {
             #expect(structure["feature"] == Value.string("advanced"))
             #expect(structure["level"] == Value.integer(3))
@@ -131,7 +129,7 @@ struct ComplexValueEvaluationTests {
         } else {
             #expect(Bool(false), "Expected structure value")
         }
-        
+
         #expect(evaluation.variant == "complex-config")
         #expect(evaluation.reason == "experiment")
         #expect(evaluation.flagMetadata.isEmpty)
@@ -143,19 +141,19 @@ struct ComplexValueEvaluationTests {
             "config": AnyValue.dictionary([
                 "timeout": AnyValue.int(30),
                 "retries": AnyValue.int(3),
-                "endpoint": AnyValue.string("https://api.example.com")
+                "endpoint": AnyValue.string("https://api.example.com"),
             ]),
             "features": AnyValue.array([
                 AnyValue.string("feature-a"),
                 AnyValue.string("feature-b"),
-                AnyValue.string("feature-c")
+                AnyValue.string("feature-c"),
             ]),
             "metadata": AnyValue.dictionary([
                 "version": AnyValue.string("2.1.0"),
-                "beta": AnyValue.bool(false)
-            ])
+                "beta": AnyValue.bool(false),
+            ]),
         ])
-        
+
         let flagDetails = FlagDetails<AnyValue>(
             key: "app-config",
             value: complexAnyValue,
@@ -163,9 +161,9 @@ struct ComplexValueEvaluationTests {
             reason: "admin_override",
             error: nil
         )
-        
+
         let evaluation: ProviderEvaluation<Value> = ProviderEvaluation(flagDetails)
-        
+
         if case .structure(let structure) = evaluation.value {
             // Check config section
             if case .structure(let config) = structure["config"] {
@@ -175,7 +173,7 @@ struct ComplexValueEvaluationTests {
             } else {
                 #expect(Bool(false), "Expected config structure")
             }
-            
+
             // Check features array
             if case .list(let features) = structure["features"] {
                 #expect(features.count == 3)
@@ -185,7 +183,7 @@ struct ComplexValueEvaluationTests {
             } else {
                 #expect(Bool(false), "Expected features list")
             }
-            
+
             // Check metadata section
             if case .structure(let metadata) = structure["metadata"] {
                 #expect(metadata["version"] == Value.string("2.1.0"))
@@ -196,7 +194,7 @@ struct ComplexValueEvaluationTests {
         } else {
             #expect(Bool(false), "Expected structure value")
         }
-        
+
         #expect(evaluation.variant == "full-config")
         #expect(evaluation.reason == "admin_override")
         #expect(evaluation.flagMetadata.isEmpty)
@@ -204,8 +202,7 @@ struct ComplexValueEvaluationTests {
 }
 
 @Suite("ProviderEvaluation Edge Cases")
-struct ProviderEvaluationEdgeCaseTests {
-    
+internal struct ProviderEvaluationEdgeCaseTests {
     @Test("Evaluation with nil variant and reason")
     func providerEvaluationWithNilVariantAndReason() async throws {
         let flagDetails = FlagDetails<Bool>(
@@ -215,9 +212,9 @@ struct ProviderEvaluationEdgeCaseTests {
             reason: nil,
             error: nil
         )
-        
+
         let evaluation = ProviderEvaluation(flagDetails)
-        
+
         #expect(evaluation.value == false)
         #expect(evaluation.variant == nil)
         #expect(evaluation.reason == nil)
@@ -228,14 +225,14 @@ struct ProviderEvaluationEdgeCaseTests {
     func providerEvaluationWithContext() async throws {
         // Note: Context is created but not passed to ProviderEvaluation since
         // it's handled at a higher level in the OpenFeature architecture
-        let _ = ImmutableContext(
+        _ = ImmutableContext(
             targetingKey: "user123",
             structure: ImmutableStructure(attributes: [
                 "plan": Value.string("premium"),
-                "region": Value.string("us-east")
+                "region": Value.string("us-east"),
             ])
         )
-        
+
         let flagDetails = FlagDetails<String>(
             key: "premium-feature",
             value: "enabled",
@@ -243,9 +240,9 @@ struct ProviderEvaluationEdgeCaseTests {
             reason: "user_segment",
             error: nil
         )
-        
+
         let evaluation = ProviderEvaluation(flagDetails)
-        
+
         #expect(evaluation.value == "enabled")
         #expect(evaluation.variant == "premium-variant")
         #expect(evaluation.reason == "user_segment")

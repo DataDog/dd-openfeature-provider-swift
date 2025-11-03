@@ -5,19 +5,25 @@ import DatadogFlags
 // MARK: - Shared Test Utilities
 
 /// Mock DatadogFlags Client for Testing
-class DatadogFlagsClientMock: FlagsClientProtocol {
-    private var flags: [String: (value: AnyValue, variant: String?, reason: String?)] = [:]
-    var lastSetContext: FlagsEvaluationContext?
-    
-    func setupFlag(key: String, value: AnyValue, variant: String? = nil, reason: String? = nil) {
-        flags[key] = (value: value, variant: variant, reason: reason)
+internal class DatadogFlagsClientMock: FlagsClientProtocol {
+    private struct FlagData {
+        let value: AnyValue
+        let variant: String?
+        let reason: String?
     }
-    
+
+    private var flags: [String: FlagData] = [:]
+    var lastSetContext: FlagsEvaluationContext?
+
+    func setupFlag(key: String, value: AnyValue, variant: String? = nil, reason: String? = nil) {
+        flags[key] = FlagData(value: value, variant: variant, reason: reason)
+    }
+
     func setEvaluationContext(_ context: FlagsEvaluationContext, completion: @escaping (Result<Void, FlagsError>) -> Void) {
         lastSetContext = context
         completion(.success(()))
     }
-    
+
     func getDetails<T>(key: String, defaultValue: T) -> FlagDetails<T> where T: Equatable, T: FlagValue {
         if let flag = flags[key] {
             if let value = convertAnyValueToType(flag.value, as: T.self) {
@@ -38,7 +44,7 @@ class DatadogFlagsClientMock: FlagsClientProtocol {
             error: nil
         )
     }
-    
+
     private func convertAnyValueToType<T>(_ anyValue: AnyValue, as type: T.Type) -> T? {
         switch anyValue {
         case .bool(let bool) where T.self == Bool.self:

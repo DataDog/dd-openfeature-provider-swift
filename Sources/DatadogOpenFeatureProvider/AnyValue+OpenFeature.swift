@@ -33,7 +33,7 @@ extension AnyValue {
             self = .string(String(describing: value))
         }
     }
-    
+
     /// Creates an AnyValue from OpenFeature Value
     /// Direct conversion without intermediate steps
     init(_ value: Value) throws {
@@ -56,5 +56,4 @@ extension AnyValue {
             self = .null
         }
     }
-    
 }

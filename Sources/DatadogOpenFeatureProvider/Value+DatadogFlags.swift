@@ -25,5 +25,4 @@ extension Value {
             self = .null
         }
     }
-    
 }

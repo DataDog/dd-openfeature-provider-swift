@@ -14,11 +14,12 @@ let package = Package(
     products: [
         .library(
             name: "DatadogOpenFeatureProvider",
-            targets: ["DatadogOpenFeatureProvider"]),
+            targets: ["DatadogOpenFeatureProvider"]
+        ),
     ],
     dependencies: [
         .package(url: "https://github.com/open-feature/swift-sdk.git", from: "0.1.0"),
-        .package(url: "https://github.com/DataDog/dd-sdk-ios.git", branch: "feature/flags")
+        .package(url: "https://github.com/DataDog/dd-sdk-ios.git", from: "3.2.0"),
     ],
     targets: [
         .target(
@@ -26,13 +27,14 @@ let package = Package(
             dependencies: [
                 .product(name: "DatadogFlags", package: "dd-sdk-ios"),
                 .product(name: "OpenFeature", package: "swift-sdk"),
-            ]),
+            ]
+        ),
         .testTarget(
             name: "DatadogOpenFeatureProviderTests",
             dependencies: [
                 "DatadogOpenFeatureProvider",
                 .product(name: "DatadogFlags", package: "dd-sdk-ios"),
-                .product(name: "OpenFeature", package: "swift-sdk")
+                .product(name: "OpenFeature", package: "swift-sdk"),
             ]
         ),
     ]

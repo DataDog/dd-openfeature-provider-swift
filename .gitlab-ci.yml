@@ -1,0 +1,123 @@
+stages:
+  - pre
+  - lint
+  - test
+  - build
+
+variables:
+  # Default Xcode version for all jobs
+  DEFAULT_XCODE: "16.2.0"
+  DEFAULT_IOS_OS: "18.3.1"
+  DEFAULT_TVOS_OS: "18.2"
+
+default:
+  tags:
+    - macos:sonoma
+    - specific:true
+
+# ┌───────────────┐
+# │ Utility jobs: │
+# └───────────────┘
+
+.test-pipeline-job:
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"' # always on main branch
+    - if: '$CI_COMMIT_BRANCH' # when on other branch with following changes
+      changes:
+        paths:
+          - "Sources/**/*"
+          - "Tests/**/*"
+          - "tools/**/*"
+          - "Package.swift"
+          - "Makefile"
+          - ".gitlab-ci.yml"
+
+# ┌──────────────────────────┐
+# │ Environment validation:  │
+# └──────────────────────────┘
+
+ENV check:
+  stage: pre
+  rules: 
+    - !reference [.test-pipeline-job, rules]
+  script:
+    - ./tools/runner-setup.sh
+    - make env-check
+
+# ┌──────────────────────────┐
+# │ Code quality and style:  │
+# └──────────────────────────┘
+
+Lint:
+  stage: lint
+  rules: 
+    - !reference [.test-pipeline-job, rules]
+  script:
+    - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE"
+    - make lint
+
+# ┌──────────────────────────┐
+# │ Testing:                 │
+# └──────────────────────────┘
+
+Unit Tests:
+  stage: test
+  rules: 
+    - !reference [.test-pipeline-job, rules]
+  script:
+    - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE"
+    - make test
+
+# ┌──────────────────────────┐
+# │ Building and packaging:  │
+# └──────────────────────────┘
+
+SPM Build (Swift Package Manager):
+  stage: build
+  rules: 
+    - !reference [.test-pipeline-job, rules]
+  script:
+    - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE"
+    - make spm-build
+
+Platform Tests (iOS):
+  stage: build
+  rules: 
+    - !reference [.test-pipeline-job, rules]
+  variables:
+    PLATFORM: "iOS Simulator"
+    DEVICE: "iPhone 16"
+  script:
+    - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE"
+    - xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=$PLATFORM,name=$DEVICE,OS=$DEFAULT_IOS_OS" build test
+
+Platform Tests (macOS):
+  stage: build
+  rules: 
+    - !reference [.test-pipeline-job, rules]
+  script:
+    - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE"
+    - xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=macOS,arch=arm64" build test
+
+Platform Tests (tvOS):
+  stage: build
+  rules: 
+    - !reference [.test-pipeline-job, rules]
+  variables:
+    PLATFORM: "tvOS Simulator"
+    DEVICE: "Apple TV"
+  script:
+    - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE"
+    - xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=$PLATFORM,name=$DEVICE,OS=$DEFAULT_TVOS_OS" build test
+
+Platform Tests (watchOS):
+  stage: build
+  rules: 
+    - !reference [.test-pipeline-job, rules]
+  variables:
+    PLATFORM: "watchOS Simulator"  
+    DEVICE: "Apple Watch Series 10 (46mm)"
+  script:
+    - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE"
+    - xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=$PLATFORM,name=$DEVICE,OS=latest" build
+  allow_failure: true # watchOS tests can be flaky

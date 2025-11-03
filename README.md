@@ -50,6 +50,18 @@ Or add it through Xcode:
 
 ## Development
 
+### Quick Commands
+
+This project uses a Makefile for common development tasks:
+
+```bash
+make help       # Show all available targets
+make lint       # Run SwiftLint on source and test files  
+make test       # Run Swift tests
+make spm-build  # Build with Swift Package Manager
+make clean      # Clean build artifacts
+```
+
 ### Building the Package
 
 ```bash
@@ -58,6 +70,9 @@ git clone https://github.com/Datadog/dd-openfeature-provider-swift.git
 cd dd-openfeature-provider-swift
 
 # Build the package
+make spm-build
+
+# Or use Swift directly
 swift build
 ```
 
@@ -65,10 +80,28 @@ swift build
 
 ```bash
 # Run all tests
+make test
+
+# Or use Swift directly
 swift test
 
 # Run tests for specific platform (requires Xcode)
 xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=iOS Simulator,name=iPhone 16" test
+```
+
+### Code Linting
+
+This project uses [SwiftLint](https://github.com/realm/SwiftLint) to enforce Swift style and conventions with separate configurations for source and test files.
+
+```bash
+# Install SwiftLint (if not already installed)
+brew install swiftlint
+
+# Run SwiftLint
+make lint
+
+# Auto-fix violations where possible
+./tools/lint/run-linter.sh --fix
 ```
 
 ### Platform Testing
@@ -174,21 +207,34 @@ let flagValue = client.getBooleanValue(key: "my-feature-flag", defaultValue: fal
 
 2. **Run tests:**
    ```bash
-   swift test
+   make test
    ```
 
-3. **Format code** (if using SwiftFormat):
+3. **Run linting:**
    ```bash
-   swiftformat .
+   make lint
+   ```
+
+4. **All development commands:**
+   ```bash
+   make help  # Show all available targets
    ```
 
 ### CI/CD
 
-This repository includes GitHub Actions workflows that:
-- Test on multiple Swift versions (5.9, 5.10, 6.0)
-- Test on multiple platforms (iOS, macOS, tvOS, watchOS)
-- Run on both Ubuntu and macOS runners
-- Cache dependencies for faster builds
+This repository uses GitLab CI for automated testing:
+- Environment validation and tool checking
+- SwiftLint enforcement
+- Unit tests using Swift Package Manager
+- Multi-platform builds (iOS, macOS, tvOS, watchOS)
+
+Local development commands mirror the CI pipeline:
+```bash
+make env-check  # Environment validation
+make lint       # Code quality checks
+make test       # Unit tests
+make spm-build  # Package builds
+```
 
 ## License
 
