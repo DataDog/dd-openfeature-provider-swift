@@ -39,7 +39,7 @@ dependencies: [
 Check [releases](https://github.com/DataDog/dd-openfeature-provider-swift/releases) for available versions.
 
 **Requirements:**
-- DataDog SDK: 3.2.0+
+- Datadog SDK: 3.2.0+
 - OpenFeature Swift SDK: 0.4.0
 
 Or add it through Xcode:

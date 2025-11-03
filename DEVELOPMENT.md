@@ -1,6 +1,6 @@
 # Development Guide
 
-This guide covers development setup, testing, and contribution workflows for the DataDog OpenFeature Provider for Swift.
+This guide covers development setup, testing, and contribution workflows for the Datadog OpenFeature Provider for Swift.
 
 ## Quick Commands
 
@@ -95,7 +95,7 @@ make env-check
 The project uses Swift Package Manager with the following dependency strategy:
 
 - **OpenFeature Swift SDK**: Pinned to exact version (see Package.swift)
-- **DataDog SDK**: Flexible range from minimum supported version (see Package.swift)
+- **Datadog SDK**: Flexible range from minimum supported version (see Package.swift)
 
 ### Updating Dependencies
 
@@ -106,7 +106,7 @@ The project uses Swift Package Manager with the following dependency strategy:
    # Update DEVELOPMENT.md requirements
    ```
 
-2. **For DataDog SDK** (backward compatible):
+2. **For Datadog SDK** (backward compatible):
    ```bash
    # Version range automatically allows newer versions
    # Test compatibility with: make test
@@ -150,4 +150,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
 - Write unit tests for new features
 - Test edge cases and error conditions
 - Ensure all platforms build successfully
-- Verify backward compatibility with supported DataDog SDK versions
+- Verify backward compatibility with supported Datadog SDK versions
