@@ -57,14 +57,14 @@ make test
 swift test
 
 # Run tests for specific platform (requires Xcode)
-xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=iOS Simulator,name=iPhone 16" test
+xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=iOS Simulator,name=iPhone 15" test
 ```
 
 ### Platform Testing
 
 ```bash
-# Test on different platforms
-xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=iOS Simulator,name=iPhone 16" build
+# Test on different platforms (use available simulators)
+xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=iOS Simulator,name=iPhone 15" build
 xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=macOS,arch=arm64" build  
 xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=tvOS Simulator,name=Apple TV" build
 ```
@@ -94,8 +94,8 @@ make env-check
 
 The project uses Swift Package Manager with the following dependency strategy:
 
-- **OpenFeature Swift SDK**: Pinned to exact version `0.4.0` (unstable upstream)
-- **DataDog SDK**: Flexible range `from: "3.2.0"` (stable, customer-compatible)
+- **OpenFeature Swift SDK**: Pinned to exact version (see Package.swift)
+- **DataDog SDK**: Flexible range from minimum supported version (see Package.swift)
 
 ### Updating Dependencies
 
@@ -129,30 +129,6 @@ make test       # Unit tests
 make spm-build  # Package builds
 ```
 
-## Project Structure
-
-```
-dd-openfeature-provider-swift/
-├── Sources/DatadogOpenFeatureProvider/     # Main provider implementation
-│   ├── DatadogProvider.swift              # Core provider
-│   ├── AnyValue+OpenFeature.swift         # Type conversions
-│   ├── FlagsEvaluationContext+OpenFeature.swift
-│   ├── ProviderEvaluation+DatadogFlags.swift
-│   └── Value+DatadogFlags.swift
-├── Tests/DatadogOpenFeatureProviderTests/  # Test suite
-│   ├── DatadogProviderTests.swift          # Provider tests
-│   ├── AnyValueConversionTests.swift       # Type conversion tests
-│   ├── ContextConversionTests.swift        # Context tests
-│   ├── ProviderEvaluationTests.swift       # Evaluation tests
-│   ├── ValueConversionTests.swift          # Value tests
-│   └── TestUtilities.swift                # Test helpers
-├── tools/                                  # Development tools
-│   ├── lint/                              # SwiftLint configuration
-│   └── utils/                             # Build utilities
-├── Package.swift                          # Swift Package Manager
-├── Makefile                               # Development commands
-└── README.md                              # User documentation
-```
 
 ## Contributing
 
