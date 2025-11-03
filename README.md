@@ -32,17 +32,15 @@ Add this package to your `Package.swift` file:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/Datadog/dd-openfeature-provider-swift.git", from: "1.0.0")
+    .package(url: "https://github.com/Datadog/dd-openfeature-provider-swift.git", from: "0.1.0")
 ]
 ```
 
-For development/testing purposes only, you can use the main branch:
+Check [releases](https://github.com/DataDog/dd-openfeature-provider-swift/releases) for available versions.
 
-```swift
-dependencies: [
-    .package(url: "https://github.com/Datadog/dd-openfeature-provider-swift.git", branch: "main")
-]
-```
+**Requirements:**
+- Datadog SDK: 3.2.0+
+- OpenFeature Swift SDK: 0.4.0
 
 Or add it through Xcode:
 1. **File** → **Add Package Dependencies**
@@ -50,68 +48,7 @@ Or add it through Xcode:
 
 ## Development
 
-### Quick Commands
-
-This project uses a Makefile for common development tasks:
-
-```bash
-make help       # Show all available targets
-make lint       # Run SwiftLint on source and test files  
-make test       # Run Swift tests
-make spm-build  # Build with Swift Package Manager
-make clean      # Clean build artifacts
-```
-
-### Building the Package
-
-```bash
-# Clone the repository
-git clone https://github.com/Datadog/dd-openfeature-provider-swift.git
-cd dd-openfeature-provider-swift
-
-# Build the package
-make spm-build
-
-# Or use Swift directly
-swift build
-```
-
-### Running Tests
-
-```bash
-# Run all tests
-make test
-
-# Or use Swift directly
-swift test
-
-# Run tests for specific platform (requires Xcode)
-xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=iOS Simulator,name=iPhone 16" test
-```
-
-### Code Linting
-
-This project uses [SwiftLint](https://github.com/realm/SwiftLint) to enforce Swift style and conventions with separate configurations for source and test files.
-
-```bash
-# Install SwiftLint (if not already installed)
-brew install swiftlint
-
-# Run SwiftLint
-make lint
-
-# Auto-fix violations where possible
-./tools/lint/run-linter.sh --fix
-```
-
-### Platform Testing
-
-```bash
-# Test on different platforms
-xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=iOS Simulator,name=iPhone 16" build
-xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=macOS,arch=arm64" build  
-xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=tvOS Simulator,name=Apple TV" build
-```
+See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed development setup, testing, and contribution guidelines.
 
 ## Usage
 
@@ -169,72 +106,49 @@ let flagValue = client.getBooleanValue(key: "my-feature-flag", defaultValue: fal
 ## Architecture
 
 ```
-┌─────────────────-┐    ┌──────────────────────┐    ┌─────────────────┐
-│ OpenFeature App  │────│ DatadogProvider      │────│ Datadog Backend │
-│                  │    │                      │    │                 │
-│ - getBooleanValue│    │ - FlagsClient mgmt   │    │ - Flag configs  │
-│ - getStringValue │    │ - Lifecycle mgmt     │    │ - User targeting│
-│ - setContext     │    │ - Context conversion │    │ - A/B testing   │
-└─────────────────-┘    │ - Type mapping       │    └─────────────────┘
-                        │ - Error handling     │            ▲
-                        └──────────────────────┘            │
-                                    │                       │
-                                    ▼                       │
-                            ┌─────────────────┐             │
-                            │ DatadogFlags    │──────-──────┘
-                            │ SDK Client      │
-                            │ (dd-sdk-ios)    │
-                            └─────────────────┘
+┌─────────────────┐    ┌──────────────────┐
+│ Your App        │────│ OpenFeature SDK  │
+│                 │    │                  │
+│ - App code      │    │ - Client API     │
+│ - Flag requests │    │ - Provider mgmt  │
+│ - Context mgmt  │    │ - Type system    │
+└─────────────────┘    │ - Hook system    │
+                       └──────────────────┘
+                                  │
+                                  ▼
+                       ┌──────────────────┐
+                       │ DatadogProvider  │
+                       │                  │
+                       │ - Creates &      │
+                       │   delegates to   │
+                       │   FlagsClient    │
+                       │ - Context conv.  │
+                       │ - Type mapping   │
+                       └──────────────────┘
+                                  │
+                                  ▼
+                       ┌──────────────────┐    ┌──────────────────┐
+                       │ DatadogFlags     │────│ Datadog Backend  │
+                       │ SDK Client       │    │                  │
+                       │ (dd-sdk-ios)     │    │ - Flag configs   │
+                       │                  │    │ - User targeting │
+                       │ - HTTP requests  │    │ - A/B testing    │
+                       │ - Caching        │    └──────────────────┘
+                       │ - Networking     │
+                       └──────────────────┘
 ```
 
 ### Key Components
 
-- **OpenFeature App**: Your application using OpenFeature's standard API
-- **DatadogProvider**: Main OpenFeature provider that creates and manages the FlagsClient internally, handles lifecycle, context management, and type conversions
+- **Your App**: Your application using OpenFeature's standard API
+- **OpenFeature SDK**: The core OpenFeature Swift SDK that provides the client API, provider management, type system, and hook system
+- **DatadogProvider**: A bridge that creates a DatadogFlags client, converts between OpenFeature and Datadog types, and delegates flag operations to the client
 - **DatadogFlags SDK Client**: The client from dd-sdk-ios that communicates with Datadog's backend (created automatically by the provider)
 - **Datadog Backend**: Datadog's service that serves flag configurations and handles targeting
 
 ## Contributing
 
-### Development Setup
-
-1. **Clone and set up:**
-   ```bash
-   git clone https://github.com/Datadog/dd-openfeature-provider-swift.git
-   cd dd-openfeature-provider-swift
-   swift package resolve
-   ```
-
-2. **Run tests:**
-   ```bash
-   make test
-   ```
-
-3. **Run linting:**
-   ```bash
-   make lint
-   ```
-
-4. **All development commands:**
-   ```bash
-   make help  # Show all available targets
-   ```
-
-### CI/CD
-
-This repository uses GitLab CI for automated testing:
-- Environment validation and tool checking
-- SwiftLint enforcement
-- Unit tests using Swift Package Manager
-- Multi-platform builds (iOS, macOS, tvOS, watchOS)
-
-Local development commands mirror the CI pipeline:
-```bash
-make env-check  # Environment validation
-make lint       # Code quality checks
-make test       # Unit tests
-make spm-build  # Package builds
-```
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines and [DEVELOPMENT.md](DEVELOPMENT.md) for detailed setup instructions, testing guidelines, and development workflow.
 
 ## License
 
