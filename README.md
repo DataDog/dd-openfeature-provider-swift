@@ -148,7 +148,7 @@ let flagValue = client.getBooleanValue(key: "my-feature-flag", defaultValue: fal
 
 ## Contributing
 
-We welcome contributions! Please see [DEVELOPMENT.md](DEVELOPMENT.md) for detailed setup instructions, testing guidelines, and contribution workflow.
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines and [DEVELOPMENT.md](DEVELOPMENT.md) for detailed setup instructions, testing guidelines, and development workflow.
 
 ## License
 

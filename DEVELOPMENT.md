@@ -56,17 +56,17 @@ make test
 # Or use Swift directly
 swift test
 
-# Run tests for specific platform (requires Xcode)
-xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=iOS Simulator,name=iPhone 15" test
+# Run tests for specific platform (requires Xcode - adjust device name/OS as needed)
+xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=iOS Simulator,name=iPhone 16,OS=18.5" test
 ```
 
 ### Platform Testing
 
 ```bash
-# Test on different platforms (use available simulators)
-xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=iOS Simulator,name=iPhone 15" build
+# Test on different platforms (adjust device names/OS versions as available)
+xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=iOS Simulator,name=iPhone 16,OS=18.5" build
 xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=macOS,arch=arm64" build  
-xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=tvOS Simulator,name=Apple TV" build
+xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=tvOS Simulator,name=Apple TV,OS=26.0" build
 ```
 
 ## Code Quality
@@ -115,13 +115,9 @@ The project uses Swift Package Manager with the following dependency strategy:
 
 ## CI/CD
 
-This repository uses GitLab CI for automated testing:
-- Environment validation and tool checking
-- SwiftLint enforcement  
-- Unit tests using Swift Package Manager
-- Multi-platform builds (iOS, macOS, tvOS, watchOS)
+The this repository uses GitLab CI for automated testing. **Contributors using forks won't have access to this CI pipeline.**
 
-Local development commands mirror the CI pipeline:
+**Before submitting a pull request, run these commands locally to ensure your changes will pass CI:**
 ```bash
 make env-check  # Environment validation
 make lint       # Code quality checks
@@ -129,8 +125,9 @@ make test       # Unit tests
 make spm-build  # Package builds
 ```
 
-
 ## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
 
 1. **Fork and clone** the repository
 2. **Create a feature branch**: `git checkout -b feature/your-feature`
