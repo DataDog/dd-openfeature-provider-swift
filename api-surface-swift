@@ -1,0 +1,17 @@
+# ----------------------------------
+# API surface for DatadogOpenFeatureProvider:
+# ----------------------------------
+
+public class DatadogProvider: FeatureProvider
+    public let hooks: [any Hook] = []
+    public let metadata: ProviderMetadata
+    public init(name: String = FlagsClient.defaultName,core: DatadogCoreProtocol = CoreRegistry.default)
+    public func initialize(initialContext: EvaluationContext?) async throws
+    public func onContextSet(oldContext: EvaluationContext?, newContext: EvaluationContext) async throws
+    public func getBooleanEvaluation(key: String, defaultValue: Bool, context: EvaluationContext?) throws -> ProviderEvaluation<Bool>
+    public func getStringEvaluation(key: String, defaultValue: String, context: EvaluationContext?) throws -> ProviderEvaluation<String>
+    public func getIntegerEvaluation(key: String, defaultValue: Int64, context: EvaluationContext?) throws -> ProviderEvaluation<Int64>
+    public func getDoubleEvaluation(key: String, defaultValue: Double, context: EvaluationContext?) throws -> ProviderEvaluation<Double>
+    public func getObjectEvaluation(key: String, defaultValue: Value, context: EvaluationContext?) throws -> ProviderEvaluation<Value>
+[?] extension DatadogProvider: EventPublisher
+    public func observe() -> AnyPublisher<ProviderEvent?, Never>

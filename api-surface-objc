@@ -1,0 +1,44 @@
+# ----------------------------------
+# API surface for DatadogOpenFeatureProvider:
+# ----------------------------------
+
+public final class objc_DatadogProvider: NSObject
+    public init(name: String)
+    public convenience override init()
+    public func initialize(initialContext: [String: Any]?, completion: @escaping (NSError?) -> Void)
+    public func setContext(oldContext: [String: Any]?, newContext: [String: Any], completion: @escaping (NSError?) -> Void)
+    public func getBooleanValue(key: String, defaultValue: Bool, context: [String: Any]?) throws -> objc_BooleanEvaluation
+    public func getStringValue(key: String, defaultValue: String, context: [String: Any]?) throws -> objc_StringEvaluation
+    public func getIntegerValue(key: String, defaultValue: Int64, context: [String: Any]?) throws -> objc_IntegerEvaluation
+    public func getDoubleValue(key: String, defaultValue: Double, context: [String: Any]?) throws -> objc_DoubleEvaluation
+    public func getObjectValue(key: String, defaultValue: [String: Any], context: [String: Any]?) throws -> objc_ObjectEvaluation
+public final class objc_BooleanEvaluation: NSObject
+    @objc public let value: Bool
+    @objc public let variant: String?
+    @objc public let reason: String
+    @objc public let errorCode: String?
+    @objc public let errorMessage: String?
+public final class objc_StringEvaluation: NSObject
+    @objc public let value: String
+    @objc public let variant: String?
+    @objc public let reason: String
+    @objc public let errorCode: String?
+    @objc public let errorMessage: String?
+public final class objc_IntegerEvaluation: NSObject
+    @objc public let value: Int64
+    @objc public let variant: String?
+    @objc public let reason: String
+    @objc public let errorCode: String?
+    @objc public let errorMessage: String?
+public final class objc_DoubleEvaluation: NSObject
+    @objc public let value: Double
+    @objc public let variant: String?
+    @objc public let reason: String
+    @objc public let errorCode: String?
+    @objc public let errorMessage: String?
+public final class objc_ObjectEvaluation: NSObject
+    @objc public let value: [String: Any]
+    @objc public let variant: String?
+    @objc public let reason: String
+    @objc public let errorCode: String?
+    @objc public let errorMessage: String?
