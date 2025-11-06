@@ -53,48 +53,18 @@ See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed development setup, testing, an
 ```swift
 import OpenFeature
 import DatadogOpenFeatureProvider
-import DatadogCore
-import DatadogFlags
 
-// 1. Initialize Datadog SDK and enable flags
-let config = Datadog.Configuration.builderUsing(
-    clientToken: "YOUR_CLIENT_TOKEN",
-    environment: "production"
-).build()
+// After Datadog.initialize() and Flags.enable() have been called
 
-Datadog.initialize(with: config, trackingConsent: .granted)
-
-let flagsConfig = Flags.Configuration()
-Flags.enable(with: flagsConfig)
-
-// 2. Create user context for targeting
-let context = ImmutableContext(targetingKey: "user123")
-
-// 3. Create and register the OpenFeature provider
+// 1. Create and set the OpenFeature provider
 let provider = DatadogProvider()
-await OpenFeatureAPI.shared.setProviderAndWait(provider: provider, initialContext: context)
+OpenFeatureAPI.shared.setProvider(provider: provider)
 
-// 4. Get OpenFeature client and evaluate flags
-let client = OpenFeatureAPI.shared.getClient()
-let flagValue = client.getBooleanValue(key: "my-feature-flag", defaultValue: false)
-```
+// 2. Set evaluation context
+let context = ImmutableContext(targetingKey: "user123")
+OpenFeatureAPI.shared.setEvaluationContext(evaluationContext: context)
 
-### Update With Additional Context Attributes
-
-```swift
-// Create detailed user context for advanced targeting
-let newContext = ImmutableContext(
-    targetingKey: "user123",
-    structure: ImmutableStructure(attributes: [
-        "segment": Value.string("premium"),
-        "beta_user": Value.boolean(true),
-        "region": Value.string("us-west")
-    ])
-)
-
-await OpenFeatureAPI.shared.setEvaluationContextAndWait(evaluationContext: newContext)
-
-// Flag evaluations will now use the new context
+// 3. Use OpenFeature client
 let client = OpenFeatureAPI.shared.getClient()
 let flagValue = client.getBooleanValue(key: "my-feature-flag", defaultValue: false)
 ```
