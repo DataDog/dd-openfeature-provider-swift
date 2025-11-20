@@ -12,35 +12,11 @@ This package provides a bridge between [OpenFeature](https://openfeature.dev/) a
 
 ## Installation
 
-### Prerequisites
-
-1. **Install Xcode** from the Mac App Store or Apple Developer portal
-2. **Verify Xcode Command Line Tools** are installed:
-   ```bash
-   xcode-select --install
-   ```
-
-### Swift Package Manager
-
 ⚠️ **This package is currently in development and not yet ready for production use.**
 
-Add this package to your `Package.swift` file:
+Supports **Swift Package Manager** and **CocoaPods** on iOS 14+, macOS 12+, watchOS 7+, and tvOS 14+.
 
-```swift
-dependencies: [
-    .package(url: "https://github.com/Datadog/dd-openfeature-provider-swift.git", from: "0.1.0")
-]
-```
-
-Check [releases](https://github.com/DataDog/dd-openfeature-provider-swift/releases) for available versions.
-
-**Requirements:**
-- Datadog SDK: 3.2.0+
-- OpenFeature Swift SDK: 0.4.0
-
-Or add it through Xcode:
-1. **File** → **Add Package Dependencies**
-2. Enter: `https://github.com/Datadog/dd-openfeature-provider-swift.git`
+For installation instructions, see **[INSTALLATION.md](INSTALLATION.md)**.
 
 ## Development
 
@@ -78,69 +54,6 @@ await OpenFeatureAPI.shared.setProviderAndWait(provider: provider, initialContex
 let client = OpenFeatureAPI.shared.getClient()
 let flagValue = client.getBooleanValue(key: "my-feature-flag", defaultValue: false)
 ```
-
-### Update With Additional Context Attributes
-
-```swift
-// Create detailed user context for advanced targeting
-let newContext = ImmutableContext(
-    targetingKey: "user123",
-    structure: ImmutableStructure(attributes: [
-        "segment": Value.string("premium"),
-        "beta_user": Value.boolean(true),
-        "region": Value.string("us-west")
-    ])
-)
-
-await OpenFeatureAPI.shared.setEvaluationContextAndWait(evaluationContext: newContext)
-
-// Flag evaluations will now use the new context
-let client = OpenFeatureAPI.shared.getClient()
-let flagValue = client.getBooleanValue(key: "my-feature-flag", defaultValue: false)
-```
-
-## Architecture
-
-```
-┌─────────────────┐    ┌──────────────────┐
-│ Your App        │────│ OpenFeature SDK  │
-│                 │    │                  │
-│ - App code      │    │ - Client API     │
-│ - Flag requests │    │ - Provider mgmt  │
-│ - Context mgmt  │    │ - Type system    │
-└─────────────────┘    │ - Hook system    │
-                       └──────────────────┘
-                                  │
-                                  ▼
-                       ┌──────────────────┐
-                       │ DatadogProvider  │
-                       │                  │
-                       │ - Creates &      │
-                       │   delegates to   │
-                       │   FlagsClient    │
-                       │ - Context conv.  │
-                       │ - Type mapping   │
-                       └──────────────────┘
-                                  │
-                                  ▼
-                       ┌──────────────────┐    ┌──────────────────┐
-                       │ DatadogFlags     │────│ Datadog Backend  │
-                       │ SDK Client       │    │                  │
-                       │ (dd-sdk-ios)     │    │ - Flag configs   │
-                       │                  │    │ - User targeting │
-                       │ - HTTP requests  │    │ - A/B testing    │
-                       │ - Caching        │    └──────────────────┘
-                       │ - Networking     │
-                       └──────────────────┘
-```
-
-### Key Components
-
-- **Your App**: Your application using OpenFeature's standard API
-- **OpenFeature SDK**: The core OpenFeature Swift SDK that provides the client API, provider management, type system, and hook system
-- **DatadogProvider**: A bridge that creates a DatadogFlags client, converts between OpenFeature and Datadog types, and delegates flag operations to the client
-- **DatadogFlags SDK Client**: The client from dd-sdk-ios that communicates with Datadog's backend (created automatically by the provider)
-- **Datadog Backend**: Datadog's service that serves flag configurations and handles targeting
 
 ## Contributing
 
