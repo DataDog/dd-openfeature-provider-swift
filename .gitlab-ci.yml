@@ -133,7 +133,7 @@ Smoke Tests (iOS):
     - !reference [.test-pipeline-job, rules]
   variables:
     PLATFORM: "iOS Simulator"
-    DEVICE: "iPhone 16 Pro"
+    DEVICE: "iPhone 15 Pro"
   script:
     - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE"
-    - make smoke-test-ios-all OS="$DEFAULT_IOS_OS" PLATFORM="$PLATFORM" DEVICE="$DEVICE"
+    - make smoke-test-ios-all OS="latest" PLATFORM="$PLATFORM" DEVICE="$DEVICE"

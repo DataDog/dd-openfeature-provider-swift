@@ -9,9 +9,9 @@ include tools/utils/common.mk
 DEFAULT_ENV := dev
 
 # Test env for running iOS tests in local:
-DEFAULT_IOS_OS := 18.5
+DEFAULT_IOS_OS := latest
 DEFAULT_IOS_PLATFORM := iOS Simulator
-DEFAULT_IOS_DEVICE := iPhone 16 Pro
+DEFAULT_IOS_DEVICE := iPhone 15 Pro
 
 env-check:
 	@$(ECHO_TITLE) "make env-check"
