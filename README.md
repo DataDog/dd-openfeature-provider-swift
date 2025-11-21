@@ -44,7 +44,7 @@ let flagsConfig = Flags.Configuration()
 Flags.enable(with: flagsConfig)
 
 // 2. Create user context for targeting
-let context = ImmutableContext(targetingKey: "user123")
+let context = MutableContext(targetingKey: "user123")
 
 // 3. Create and register the OpenFeature provider
 let provider = DatadogProvider()
