@@ -17,9 +17,9 @@ internal struct BasicContextConversionTests {
     @Test("Basic context with targeting key and attributes")
     func basicContextConversion() async throws {
         // Given
-        let context = ImmutableContext(
+        let context = MutableContext(
             targetingKey: "user123",
-            structure: ImmutableStructure(attributes: [
+            structure: MutableStructure(attributes: [
                 "email": Value.string("test@example.com"),
                 "age": Value.integer(25),
             ])
@@ -36,8 +36,8 @@ internal struct BasicContextConversionTests {
 
     @Test("Context without targeting key")
     func contextWithNoTargetingKey() async throws {
-        let context = ImmutableContext(
-            structure: ImmutableStructure(attributes: [
+        let context = MutableContext(
+            structure: MutableStructure(attributes: [
                 "region": Value.string("us-west-2"),
                 "plan": Value.string("premium"),
             ])
@@ -52,9 +52,9 @@ internal struct BasicContextConversionTests {
 
     @Test("Context with empty attributes")
     func contextWithEmptyAttributes() async throws {
-        let context = ImmutableContext(
+        let context = MutableContext(
             targetingKey: "user456",
-            structure: ImmutableStructure(attributes: [:])
+            structure: MutableStructure(attributes: [:])
         )
 
         let flagsContext = try FlagsEvaluationContext(context)
@@ -68,9 +68,9 @@ internal struct BasicContextConversionTests {
 internal struct TypeConversionTests {
     @Test("Complex attribute types with type preservation")
     func contextWithComplexAttributeTypes() async throws {
-        let context = ImmutableContext(
+        let context = MutableContext(
             targetingKey: "user789",
-            structure: ImmutableStructure(attributes: [
+            structure: MutableStructure(attributes: [
                 "string": Value.string("text"),
                 "integer": Value.integer(42),
                 "double": Value.double(3.14),
@@ -118,9 +118,9 @@ internal struct TypeConversionTests {
 
     @Test("Context with date should throw error")
     func contextWithDateShouldThrow() async throws {
-        let context = ImmutableContext(
+        let context = MutableContext(
             targetingKey: "user_with_date",
-            structure: ImmutableStructure(attributes: [
+            structure: MutableStructure(attributes: [
                 "date": Value.date(Date(timeIntervalSince1970: 1_609_459_200)) // 2021-01-01
             ])
         )
@@ -133,9 +133,9 @@ internal struct TypeConversionTests {
 
     @Test("Large numbers and numeric edge cases")
     func contextWithLargeNumbers() async throws {
-        let context = ImmutableContext(
+        let context = MutableContext(
             targetingKey: "user_numbers",
-            structure: ImmutableStructure(attributes: [
+            structure: MutableStructure(attributes: [
                 "maxInt64": Value.integer(Int64.max),
                 "minInt64": Value.integer(Int64.min),
                 "largeDouble": Value.double(Double.greatestFiniteMagnitude),
@@ -161,9 +161,9 @@ internal struct TypeConversionTests {
     @Test("Deeply nested structures")
     func contextWithNestedStructures() async throws {
         // Test deeply nested structure conversion
-        let context = ImmutableContext(
+        let context = MutableContext(
             targetingKey: "nested_user",
-            structure: ImmutableStructure(attributes: [
+            structure: MutableStructure(attributes: [
                 "profile": Value.structure([
                     "personal": Value.structure([
                         "name": Value.structure([
@@ -215,9 +215,9 @@ internal struct TypeConversionTests {
 internal struct StringHandlingTests {
     @Test("Special characters and encoding")
     func contextWithSpecialCharacters() async throws {
-        let context = ImmutableContext(
+        let context = MutableContext(
             targetingKey: "user-special_123",
-            structure: ImmutableStructure(attributes: [
+            structure: MutableStructure(attributes: [
                 "email": Value.string("user+test@example.com"),
                 "name": Value.string("José María"),
                 "description": Value.string("Line 1\nLine 2\tTabbed"),
@@ -236,9 +236,9 @@ internal struct StringHandlingTests {
 
     @Test("String attribute edge cases")
     func contextAttributeEdgeCases() async throws {
-        let context = ImmutableContext(
+        let context = MutableContext(
             targetingKey: "edge_cases",
-            structure: ImmutableStructure(attributes: [
+            structure: MutableStructure(attributes: [
                 "empty_string": Value.string(""),
                 "whitespace": Value.string("   "),
                 "newlines": Value.string("\n\n\n"),

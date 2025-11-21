@@ -231,9 +231,9 @@ internal struct ProviderEvaluationEdgeCaseTests {
     func providerEvaluationWithContext() async throws {
         // Note: Context is created but not passed to ProviderEvaluation since
         // it's handled at a higher level in the OpenFeature architecture
-        _ = ImmutableContext(
+        _ = MutableContext(
             targetingKey: "user123",
-            structure: ImmutableStructure(attributes: [
+            structure: MutableStructure(attributes: [
                 "plan": Value.string("premium"),
                 "region": Value.string("us-east"),
             ])
