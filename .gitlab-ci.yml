@@ -3,6 +3,7 @@ stages:
   - lint
   - test
   - build
+  - smoke-test
 
 variables:
   # Default Xcode version for all jobs
@@ -86,7 +87,7 @@ Platform Tests (iOS):
     - !reference [.test-pipeline-job, rules]
   variables:
     PLATFORM: "iOS Simulator"
-    DEVICE: "iPhone 16"
+    DEVICE: "iPhone 16 Pro"
   script:
     - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE"
     - xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=$PLATFORM,name=$DEVICE,OS=$DEFAULT_IOS_OS" build test
@@ -121,3 +122,18 @@ Platform Tests (watchOS):
     - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE"
     - xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=$PLATFORM,name=$DEVICE,OS=latest" build
   allow_failure: true # watchOS tests can be flaky
+
+# ┌────────────────────┐
+# │ Smoke Test stage:  │
+# └────────────────────┘
+
+Smoke Tests (iOS):
+  stage: smoke-test
+  rules:
+    - !reference [.test-pipeline-job, rules]
+  variables:
+    PLATFORM: "iOS Simulator"
+    DEVICE: "iPhone 16 Pro"
+  script:
+    - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE"
+    - make smoke-test-ios-all OS="$DEFAULT_IOS_OS" PLATFORM="$PLATFORM" DEVICE="$DEVICE"
