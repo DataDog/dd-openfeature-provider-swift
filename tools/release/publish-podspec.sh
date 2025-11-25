@@ -29,7 +29,7 @@ PODSPEC_PATH="$REPO_PATH/$podspec_name"
 authenticate() {
     echo_subtitle "Authenticate 'pod trunk' CLI"
     echo_info "Exporting 'COCOAPODS_TRUNK_TOKEN' for CI"
-    export COCOAPODS_TRUNK_TOKEN=$(get_secret $DD_IOS_SECRET__CP_TRUNK_TOKEN)
+    export COCOAPODS_TRUNK_TOKEN=$(get_secret $DD_OPENFEATURE_SECRET__CP_TRUNK_TOKEN)
     echo_info "▸ bundle exec pod trunk me" && bundle exec pod trunk me
     if [[ $? -ne 0 ]]; then
         echo_err "Error: 'pod trunk' is not authenticated."

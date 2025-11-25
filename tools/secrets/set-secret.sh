@@ -15,8 +15,8 @@ list_secrets() {
     RESET="\e[0m"
 
     echo "Available secrets:"
-    for key in ${(k)DD_APOLLO_SECRETS}; do
-        IFS=" | " read -r name description <<< "${DD_APOLLO_SECRETS[$key]}"
+    for key in ${(k)DD_OPENFEATURE_SECRETS}; do
+        IFS=" | " read -r name description <<< "${DD_OPENFEATURE_SECRETS[$key]}"
         echo "$key) ${GREEN}$name${RESET} - $description"
     done | sort -n
 
@@ -29,8 +29,8 @@ select_secret() {
     while true; do
         echo_info "Enter the number of the secret you want to set:"
         read "secret_number"
-        if [[ -n ${DD_APOLLO_SECRETS[$secret_number]} ]]; then
-            IFS=" | " read -r SECRET_NAME SECRET_DESC <<< "${DD_APOLLO_SECRETS[$secret_number]}"
+        if [[ -n ${DD_OPENFEATURE_SECRETS[$secret_number]} ]]; then
+            IFS=" | " read -r SECRET_NAME SECRET_DESC <<< "${DD_OPENFEATURE_SECRETS[$secret_number]}"
             break
         else
             echo_err "Invalid selection. Please enter a valid number."
@@ -101,7 +101,7 @@ set_secret_value() {
     read
     export VAULT_ADDR=$DD_VAULT_ADDR
     vault login -method=oidc -no-print
-    vault kv put "$DD_APOLLO_SECRETS_PATH_PREFIX/$SECRET_NAME" value="$SECRET_VALUE"
+    vault kv put "$DD_OPENFEATURE_SECRETS_PATH_PREFIX/$SECRET_NAME" value="$SECRET_VALUE"
     echo_succ "Secret '$SECRET_NAME' set successfully."
 }
 

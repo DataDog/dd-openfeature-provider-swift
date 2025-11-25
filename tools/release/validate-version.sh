@@ -19,8 +19,8 @@ define_arg "artifacts-path" "" "The path to build artifacts." "string" "true"
 check_for_help "$@"
 parse_args "$@"
 
-REPO_PATH="$artifacts_path/dd-sdk-ios-apollo-interceptor"
-SDK_VERSION_FILE="$REPO_PATH/Sources/DatadogApollo/Versioning.swift"
+REPO_PATH="$artifacts_path/dd-openfeature-provider-swift"
+SDK_VERSION_FILE="$REPO_PATH/Sources/DatadogOpenFeatureProvider/Versioning.swift"
 
 check_sdk_version () {
     echo_subtitle "Check 'sdk_version'"

@@ -14,8 +14,8 @@ source ./tools/secrets/get-secret.sh
 
 echo_subtitle "Check if secret values are available"
 
-for key in ${(k)DD_APOLLO_SECRETS}; do
-    secret_name=${DD_APOLLO_SECRETS[$key]%% |*}
+for key in ${(k)DD_OPENFEATURE_SECRETS}; do
+    secret_name=${DD_OPENFEATURE_SECRETS[$key]%% |*}
     get_secret $secret_name > /dev/null && echo_succ "$secret_name - OK"
 done
 

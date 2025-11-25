@@ -10,6 +10,6 @@ class CPProjectUITests: XCTestCase {
     func testDisplayingUI() throws {
         let app = XCUIApplication()
         app.launch()
-        XCTAssert(app.staticTexts["Testing DatadogApollo..."].exists)
+        XCTAssert(app.staticTexts["Testing DatadogOpenFeatureProvider..."].exists)
     }
 }
