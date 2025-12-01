@@ -10,6 +10,10 @@ This package provides a bridge between [OpenFeature](https://openfeature.dev/) a
 - **Swift 5.9+**
 - **iOS 14.0+ / macOS 12.0+ / watchOS 7.0+ / tvOS 14.0+**
 
+### OpenFeature SDK Version
+
+This provider uses OpenFeature Swift SDK 0.3.0, although there are [newer versions](https://github.com/open-feature/swift-sdk/releases), to match the latest version published on CocoaPods. E.g. this means using `MutableContext` instead of the newer `ImmutableContext`.
+
 ## Installation
 
 ⚠️ **This package is currently in development and not yet ready for production use.**
