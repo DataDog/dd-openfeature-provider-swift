@@ -1,8 +1,19 @@
 .DS_Store
-/.build
-/Packages
+/build
+.build
+.swiftpm
+.spm.pods
+Package.resolved
+Carthage/Build
+Carthage/Checkouts
+
+# CocoaPods
+Pods/
+Podfile.lock
+**/SmokeTests/**/Podfile
+!**/SmokeTests/**/Podfile.src
+
 xcuserdata/
 DerivedData/
-.swiftpm/configuration/registries.json
-.swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
+*.local.xcconfig
 .netrc

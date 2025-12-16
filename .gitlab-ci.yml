@@ -2,13 +2,21 @@ stages:
   - pre
   - lint
   - test
-  - build
+  - smoke-test
+  - release-publish
 
 variables:
-  # Default Xcode version for all jobs
+  MAIN_BRANCH: "main"
   DEFAULT_XCODE: "16.2.0"
   DEFAULT_IOS_OS: "18.3.1"
   DEFAULT_TVOS_OS: "18.2"
+  # Prefilled variables for running a pipeline manually:
+  # Ref.: https://docs.gitlab.com/ee/ci/pipelines/index.html#prefill-variables-in-manual-pipelines
+  RELEASE_GIT_TAG:
+    description: "The Git tag for the release pipeline. If set, release pipeline will be triggered for the given tag."
+  RELEASE_DRY_RUN:
+    value: "1"
+    description: "Controls the dry run mode for the release pipeline. If set to '1', the pipeline will execute all steps but will not publish artifacts. If set to '0', the pipeline will run fully."
 
 default:
   tags:
@@ -19,18 +27,23 @@ default:
 # │ Utility jobs: │
 # └───────────────┘
 
+# Define rules for including jobs in the pipeline
 .test-pipeline-job:
   rules:
-    - if: '$CI_COMMIT_BRANCH == "main"' # always on main branch
+    - if: '$CI_COMMIT_BRANCH == $MAIN_BRANCH' # always on main branch
     - if: '$CI_COMMIT_BRANCH' # when on other branch with following changes
       changes:
         paths:
-          - "Sources/**/*"
-          - "Tests/**/*"
-          - "tools/**/*"
-          - "Package.swift"
-          - "Makefile"
-          - ".gitlab-ci.yml"
+          - "**/*"
+        except:
+          - "**/*.md"
+          - "LICENSE*"
+          - "NOTICE"
+          - ".gitignore"
+
+.release-pipeline-job:
+  rules: 
+    - if: '$CI_COMMIT_TAG || $RELEASE_GIT_TAG'
 
 # ┌──────────────────────────┐
 # │ Environment validation:  │
@@ -40,8 +53,9 @@ ENV check:
   stage: pre
   rules: 
     - !reference [.test-pipeline-job, rules]
+    - !reference [.release-pipeline-job, rules]
   script:
-    - ./tools/runner-setup.sh
+    - ./tools/runner-setup.sh --datadog-ci
     - make env-check
 
 # ┌──────────────────────────┐
@@ -52,9 +66,10 @@ Lint:
   stage: lint
   rules: 
     - !reference [.test-pipeline-job, rules]
+    - !reference [.release-pipeline-job, rules]
   script:
-    - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE"
-    - make lint
+    - make clean repo-setup ENV=ci
+    - make lint license-check
 
 # ┌──────────────────────────┐
 # │ Testing:                 │
@@ -62,62 +77,104 @@ Lint:
 
 Unit Tests:
   stage: test
-  rules: 
+  rules:
     - !reference [.test-pipeline-job, rules]
+    - !reference [.release-pipeline-job, rules]
   script:
     - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE"
+    - make clean repo-setup ENV=ci
     - make test
 
 # ┌──────────────────────────┐
-# │ Building and packaging:  │
+# │ Platform Build Testing:  │
 # └──────────────────────────┘
 
-SPM Build (Swift Package Manager):
-  stage: build
-  rules: 
-    - !reference [.test-pipeline-job, rules]
-  script:
-    - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE"
-    - make spm-build
-
 Platform Tests (iOS):
-  stage: build
+  stage: test
   rules: 
     - !reference [.test-pipeline-job, rules]
+    - !reference [.release-pipeline-job, rules]
   variables:
     PLATFORM: "iOS Simulator"
-    DEVICE: "iPhone 16"
+    DEVICE: "iPhone 16 Pro"
   script:
     - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE"
+    - make clean repo-setup ENV=ci
     - xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=$PLATFORM,name=$DEVICE,OS=$DEFAULT_IOS_OS" build test
 
 Platform Tests (macOS):
-  stage: build
+  stage: test
   rules: 
     - !reference [.test-pipeline-job, rules]
+    - !reference [.release-pipeline-job, rules]
   script:
     - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE"
+    - make clean repo-setup ENV=ci
     - xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=macOS,arch=arm64" build test
 
 Platform Tests (tvOS):
-  stage: build
+  stage: test
   rules: 
     - !reference [.test-pipeline-job, rules]
+    - !reference [.release-pipeline-job, rules]
   variables:
     PLATFORM: "tvOS Simulator"
     DEVICE: "Apple TV"
   script:
     - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE"
+    - make clean repo-setup ENV=ci
     - xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=$PLATFORM,name=$DEVICE,OS=$DEFAULT_TVOS_OS" build test
 
 Platform Tests (watchOS):
-  stage: build
+  stage: test
   rules: 
     - !reference [.test-pipeline-job, rules]
+    - !reference [.release-pipeline-job, rules]
   variables:
     PLATFORM: "watchOS Simulator"  
     DEVICE: "Apple Watch Series 10 (46mm)"
   script:
     - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE"
+    - make clean repo-setup ENV=ci
     - xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=$PLATFORM,name=$DEVICE,OS=latest" build
   allow_failure: true # watchOS tests can be flaky
+
+# ┌────────────────────┐
+# │ Smoke Test stage:  │
+# └────────────────────┘
+
+Smoke Tests (iOS):
+  stage: smoke-test
+  rules:
+    - !reference [.test-pipeline-job, rules]
+    - !reference [.release-pipeline-job, rules]
+  variables:
+    PLATFORM: "iOS Simulator"
+    DEVICE: "iPhone 15 Pro"
+  script:
+    - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE"
+    - make clean repo-setup ENV=ci
+    - make smoke-test-ios-all OS="$DEFAULT_IOS_OS" PLATFORM="$PLATFORM" DEVICE="$DEVICE"
+
+# ┌──────────────┐
+# │ SDK release: │
+# └──────────────┘
+
+.release-before-script: &export_MAKE_release_params
+  - export GIT_TAG=${RELEASE_GIT_TAG:-$CI_COMMIT_TAG} # CI_COMMIT_TAG if set, otherwise default to RELEASE_GIT_TAG
+  - if [ -z "$GIT_TAG" ]; then echo "GIT_TAG is not set"; exit 1; fi # sanity check
+  - export ARTIFACTS_PATH="artifacts/$GIT_TAG"
+  - export DRY_RUN=${CI_COMMIT_TAG:+0} # 0 if CI_COMMIT_TAG is set
+  - export DRY_RUN=${DRY_RUN:-$RELEASE_DRY_RUN} # otherwise default to RELEASE_DRY_RUN
+
+Publish CP podspecs:
+  stage: release-publish
+  rules: 
+    - !reference [.release-pipeline-job, rules]
+  before_script:
+    - *export_MAKE_release_params
+  script:
+    - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE"
+    - make env-check
+    - make clean
+    - make release-publish-podspecs

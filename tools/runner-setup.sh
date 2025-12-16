@@ -2,65 +2,33 @@
 
 # Usage:
 # $ ./tools/runner-setup.sh -h
-# This script supplements missing components on the runner for dd-openfeature-provider-swift CI.
+# This script supplements missing components on the runner before they are included through the AMI.
 
 # Options:
 #   --xcode: Specify the Xcode version to activate.
 #   --iOS: Install the iOS platform with the latest simulator if not already installed. Default: disabled.
 #   --tvOS: Install the tvOS platform with the latest simulator if not already installed. Default: disabled.
+#   --visionOS: Install the visionOS platform with the latest simulator if not already installed. Default: disabled.
 #   --watchOS: Install the watchOS platform with the latest simulator if not already installed. Default: disabled.
+#   --datadog-ci: Install 'datadog-ci' on the runner. Default: disabled.
+#   --python: Ensure Python 3 and pip are available. Default: disabled.
 
 set -eo pipefail
 source ./tools/utils/echo-color.sh
+source ./tools/utils/argparse.sh
+source ./tools/secrets/get-secret.sh
 
-# Initialize variables with defaults (following dd-sdk-ios pattern)
-xcode=""
-iOS="false"
-tvOS="false"
-watchOS="false"
+set_description "This script supplements missing components on the runner before they are included through the AMI."
+define_arg "xcode" "" "Specify the Xcode version to activate." "string" "false"
+define_arg "iOS" "false" "Install the iOS platform with the latest simulator if not already installed. Default: disabled." "store_true"
+define_arg "tvOS" "false" "Install the tvOS platform with the latest simulator if not already installed. Default: disabled." "store_true"
+define_arg "visionOS" "false" "Install the visionOS platform with the latest simulator if not already installed. Default: disabled." "store_true"
+define_arg "watchOS" "false" "Install the watchOS platform with the latest simulator if not already installed. Default: disabled." "store_true"
+define_arg "datadog-ci" "false" "Install 'datadog-ci' on the runner. Default: disabled." "store_true"
+define_arg "python" "false" "Ensure Python 3 and pip are available. Default: disabled." "store_true"
 
-# Parse arguments (simplified argparse following dd-sdk-ios pattern)
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        --xcode)
-            xcode="$2"
-            shift 2
-            ;;
-        --iOS)
-            iOS="true"
-            shift
-            ;;
-        --tvOS)
-            tvOS="true"
-            shift
-            ;;
-        --watchOS)
-            watchOS="true"
-            shift
-            ;;
-        --help|-h)
-            echo "Usage: $0 [OPTIONS]"
-            echo ""
-            echo "This script supplements missing components on the runner for dd-openfeature-provider-swift CI."
-            echo ""
-            echo "Options:"
-            echo "  --xcode VERSION    Specify the Xcode version to activate"
-            echo "  --iOS              Install the iOS platform with the latest simulator"
-            echo "  --tvOS             Install the tvOS platform with the latest simulator"
-            echo "  --watchOS          Install the watchOS platform with the latest simulator"
-            echo "  --help, -h         Show this help message"
-            echo ""
-            echo "Examples:"
-            echo "  $0 --xcode 16.2.0 --iOS --tvOS"
-            exit 0
-            ;;
-        *)
-            echo_err "Unknown option: $1"
-            echo "Use --help for usage information."
-            exit 1
-            ;;
-    esac
-done
+check_for_help "$@"
+parse_args "$@"
 
 change_xcode_version() {
     local version="$1"
@@ -101,7 +69,6 @@ change_xcode_version() {
     fi
 }
 
-# Change Xcode version if specified (following dd-sdk-ios pattern)
 if [[ -n "$xcode" ]]; then
     change_xcode_version $xcode
 fi
@@ -109,7 +76,6 @@ fi
 echo_succ "Using 'xcodebuild -version':"
 xcodebuild -version
 
-# Install platforms if requested (following dd-sdk-ios pattern)
 if [ "$iOS" = "true" ]; then
     echo_subtitle "Install iOS platform"
     echo "▸ xcodebuild -downloadPlatform iOS -quiet"
@@ -122,24 +88,58 @@ if [ "$tvOS" = "true" ]; then
     xcodebuild -downloadPlatform tvOS -quiet
 fi
 
+if [ "$visionOS" = "true" ]; then
+    echo_subtitle "Install visionOS platform"
+    echo "▸ xcodebuild -downloadPlatform visionOS -quiet"
+    xcodebuild -downloadPlatform visionOS -quiet
+fi
+
 if [ "$watchOS" = "true" ]; then
     echo_subtitle "Install watchOS platform"
     echo "▸ xcodebuild -downloadPlatform watchOS -quiet"
     xcodebuild -downloadPlatform watchOS -quiet
 fi
 
-# Ensure SwiftLint is available
-echo_subtitle "Ensuring SwiftLint is available"
-if ! command -v swiftlint >/dev/null 2>&1; then
-    echo_warn "SwiftLint not found. Installing via Homebrew..."
-    if brew install swiftlint; then
-        echo_succ "SwiftLint installed successfully"
+if [ "$datadog_ci" = "true" ]; then
+    echo_subtitle "Supply datadog-ci"
+    echo "Check current runner for existing 'datadog-ci' installation:"
+    if ! command -v datadog-ci >/dev/null 2>&1; then
+        echo_warn "Found no 'datadog-ci'. Installing..."
+        npm install -g @datadog/datadog-ci
     else
-        echo_err "Failed to install SwiftLint"
-        exit 1
+        echo_succ "'datadog-ci' already installed. Skipping..."
+        echo "datadog-ci version:"
+        datadog-ci version
     fi
-else
-    echo_succ "SwiftLint already available: $(swiftlint version)"
 fi
 
-echo_succ "Runner setup completed successfully"
+if [ "$python" = "true" ]; then
+    echo_subtitle "Ensure Python 3 and pip are available"
+    echo "Check current runner for Python 3 installation:"
+    
+    # Check if Python 3 is available
+    if ! command -v python3 >/dev/null 2>&1; then
+        echo_warn "Python 3 not found. Checking for Homebrew..."
+        if command -v brew >/dev/null 2>&1; then
+            echo "Installing Python 3 via Homebrew..."
+            brew install python@3.11
+        else
+            echo_warn "Homebrew not found. Python 3 may not be available."
+            echo "Please ensure Python 3 is installed on the runner."
+        fi
+    else
+        echo_succ "Python 3 already installed. Version:"
+        python3 --version
+    fi
+    
+    # Check if pip is available
+    if ! command -v pip3 >/dev/null 2>&1; then
+        echo_warn "pip3 not found. Installing pip..."
+        if command -v python3 >/dev/null 2>&1; then
+            python3 -m ensurepip --upgrade
+        fi
+    else
+        echo_succ "pip3 already installed. Version:"
+        pip3 --version
+    fi
+fi
