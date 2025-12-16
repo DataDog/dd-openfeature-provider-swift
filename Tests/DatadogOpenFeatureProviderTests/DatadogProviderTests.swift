@@ -123,9 +123,9 @@ internal struct ProviderMetadataTests {
         let provider = DatadogProvider(flagsClient: mockFlagsClient)
 
         // Create context with targeting key and attributes
-        let context = ImmutableContext(
+        let context = MutableContext(
             targetingKey: "user456",
-            structure: ImmutableStructure(attributes: [
+            structure: MutableStructure(attributes: [
                 "segment": Value.string("beta"),
                 "plan": Value.string("pro"),
             ])
@@ -150,9 +150,9 @@ internal struct ContextManagementTests {
         // Given
         let mockFlagsClient = DatadogFlagsClientMock()
         let provider = DatadogProvider(flagsClient: mockFlagsClient)
-        let context = ImmutableContext(
+        let context = MutableContext(
             targetingKey: "user123",
-            structure: ImmutableStructure(attributes: [
+            structure: MutableStructure(attributes: [
                 "email": Value.string("test@example.com"),
                 "age": Value.integer(25),
             ])
