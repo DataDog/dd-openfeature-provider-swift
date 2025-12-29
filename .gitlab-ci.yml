@@ -7,6 +7,7 @@ stages:
 
 variables:
   MAIN_BRANCH: "main"
+  DEVELOP_BRANCH: "develop"
   DEFAULT_XCODE: "16.2.0"
   DEFAULT_IOS_OS: "18.3.1"
   DEFAULT_TVOS_OS: "18.2"
@@ -30,7 +31,7 @@ default:
 # Define rules for including jobs in the pipeline
 .test-pipeline-job:
   rules:
-    - if: '$CI_COMMIT_BRANCH == $MAIN_BRANCH' # always on main branch
+    - if: '$CI_COMMIT_BRANCH == $MAIN_BRANCH || $CI_COMMIT_BRANCH == $DEVELOP_BRANCH' # always on main branches
     - if: '$CI_COMMIT_BRANCH' # when on other branch with following changes
       changes:
         paths:
@@ -40,6 +41,7 @@ default:
           - "LICENSE*"
           - "NOTICE"
           - ".gitignore"
+        compare_to: 'develop'
 
 .release-pipeline-job:
   rules: 
