@@ -13,8 +13,6 @@ Pod::Spec.new do |s|
 
   s.swift_version = '5.9'
   s.ios.deployment_target = '14.0'
-  s.tvos.deployment_target = '14.0'
-  s.watchos.deployment_target = '7.0'
   s.osx.deployment_target = '12.0'
 
   s.source = { :git => "https://github.com/DataDog/dd-openfeature-provider-swift.git", :tag => s.version.to_s }
