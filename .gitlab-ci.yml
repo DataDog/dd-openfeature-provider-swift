@@ -34,14 +34,16 @@ default:
     - if: '$CI_COMMIT_BRANCH == $MAIN_BRANCH || $CI_COMMIT_BRANCH == $DEVELOP_BRANCH'
     - if: '$CI_COMMIT_BRANCH' # when on other branch with following changes
       changes:
-        paths:
-          - "**/*"
-        except:
-          - "**/*.md"
-          - "LICENSE*"
-          - "NOTICE"
-          - ".gitignore"
         compare_to: 'develop'
+        paths:
+          - "**/*.swift"
+          - "**/*.xcodeproj/**/*"
+          - "**/*.xcworkspace/**/*"
+          - "**/Package.swift"
+          - "**/Makefile"
+          - "**/*.sh"
+          - ".gitlab-ci.yml"
+          - "**/*.podspec"
 
 .release-pipeline-job:
   rules: 
