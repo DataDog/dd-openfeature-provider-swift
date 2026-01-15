@@ -178,4 +178,6 @@ Publish CP podspecs:
     - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE"
     - make env-check
     - make clean
+    - mkdir -p "$ARTIFACTS_PATH"
+    - git clone --branch "$GIT_TAG" . "$ARTIFACTS_PATH/dd-openfeature-provider-swift"
     - make release-publish-podspecs
