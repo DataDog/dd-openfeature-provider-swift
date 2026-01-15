@@ -34,14 +34,13 @@ default:
     - if: '$CI_COMMIT_BRANCH == $MAIN_BRANCH || $CI_COMMIT_BRANCH == $DEVELOP_BRANCH'
     - if: '$CI_COMMIT_BRANCH' # when on other branch with following changes
       changes:
-        paths:
-          - "**/*"
-        except:
-          - "**/*.md"
-          - "LICENSE*"
-          - "NOTICE"
-          - ".gitignore"
         compare_to: 'develop'
+        paths:
+          - "Sources/**/*"
+          - "Tests/**/*"
+          - "SmokeTests/**/*"
+          - "tools/**/*"
+          - "*" # match any file in the root directory
 
 .release-pipeline-job:
   rules: 
@@ -152,7 +151,7 @@ Smoke Tests (iOS):
     - !reference [.release-pipeline-job, rules]
   variables:
     PLATFORM: "iOS Simulator"
-    DEVICE: "iPhone 15 Pro"
+    DEVICE: "iPhone 16 Pro"
   script:
     - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE"
     - make clean repo-setup ENV=ci
