@@ -36,14 +36,11 @@ default:
       changes:
         compare_to: 'develop'
         paths:
-          - "**/*.swift"
-          - "**/*.xcodeproj/**/*"
-          - "**/*.xcworkspace/**/*"
-          - "**/Package.swift"
-          - "**/Makefile"
-          - "**/*.sh"
-          - ".gitlab-ci.yml"
-          - "**/*.podspec"
+          - "Sources/**/*"
+          - "Tests/**/*"
+          - "SmokeTests/**/*"
+          - "tools/**/*"
+          - "*" # match any file in the root directory
 
 .release-pipeline-job:
   rules: 
