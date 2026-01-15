@@ -14,10 +14,9 @@ internal class ViewController: UIViewController {
 
         // Test that DatadogOpenFeatureProvider APIs are visible and can be instantiated:
         let provider = DatadogProvider()
-        
+
         // Test OpenFeature integration
         let context = MutableContext(targetingKey: "smoke-test-user")
-        
         print("✓ DatadogProvider successfully created")
         print("✓ OpenFeature context successfully created")
 
