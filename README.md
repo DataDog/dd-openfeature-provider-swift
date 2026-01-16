@@ -18,7 +18,8 @@ This provider uses OpenFeature Swift SDK 0.3.0, although there are [newer versio
 
 ⚠️ **This package is currently in development and not yet ready for production use.**
 
-Supports **Swift Package Manager** and **CocoaPods** on iOS 14+, macOS 12+, watchOS 7+, and tvOS 14+.
+- **Swift Package Manager**: iOS 14+, macOS 12+, watchOS 7+, and tvOS 14+
+- **CocoaPods**: iOS 14+ only (macOS, tvOS, and watchOS not supported due to OpenFeature 0.3.0 and DatadogFlags 3.5.0+ CocoaPods dependency limitations)
 
 For installation instructions, see **[INSTALLATION.md](INSTALLATION.md)**.
 
