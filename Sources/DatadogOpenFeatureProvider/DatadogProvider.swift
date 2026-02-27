@@ -15,6 +15,7 @@ public class DatadogProvider: FeatureProvider {
     public let metadata: ProviderMetadata
 
     private let flagsClient: FlagsClientProtocol
+    private var stateListener: ProviderStateListener?
 
     public init(
         name: String = FlagsClient.defaultName,
@@ -33,30 +34,33 @@ public class DatadogProvider: FeatureProvider {
     public func initialize(initialContext: EvaluationContext?) async throws {
         if let context = initialContext {
             let ddContext = try FlagsEvaluationContext(context)
-            // Set the context using completion handler
-            return try await withCheckedThrowingContinuation { continuation in
-                flagsClient.setEvaluationContext(ddContext) { result in
-                    switch result {
-                    case .success:
-                        continuation.resume()
-                    case .failure(let error):
-                        continuation.resume(throwing: error)
-                    }
-                }
-            }
+            try await setEvaluationContextAsync(ddContext)
         }
     }
 
     public func onContextSet(oldContext: EvaluationContext?, newContext: EvaluationContext) async throws {
         let ddContext = try FlagsEvaluationContext(newContext)
-        // Set the context using completion handler
+        try await setEvaluationContextAsync(ddContext)
+    }
+
+    /// Sets the evaluation context and waits for completion.
+    ///
+    /// When the network call fails but cached flags are available (STALE state),
+    /// this method succeeds without throwing — matching Android's behavior.
+    /// The provider will emit a `.stale` event via `observe()` instead.
+    private func setEvaluationContextAsync(_ context: FlagsEvaluationContext) async throws {
         return try await withCheckedThrowingContinuation { continuation in
-            flagsClient.setEvaluationContext(ddContext) { result in
+            flagsClient.setEvaluationContext(context) { [weak self] result in
                 switch result {
                 case .success:
                     continuation.resume()
                 case .failure(let error):
-                    continuation.resume(throwing: error)
+                    // Don't throw when transitioning to STALE (cached flags available)
+                    if self?.flagsClient.state.currentState == .stale {
+                        continuation.resume()
+                    } else {
+                        continuation.resume(throwing: error)
+                    }
                 }
             }
         }
@@ -95,9 +99,47 @@ internal struct DatadogProviderMetadata: ProviderMetadata {
 }
 
 extension DatadogProvider: EventPublisher {
+    /// Returns a publisher that emits OpenFeature provider events based on the
+    /// underlying ``FlagsClient`` state changes.
+    ///
+    /// State-to-event mapping:
+    /// - ``FlagsClientState/ready`` → `.ready`
+    /// - ``FlagsClientState/stale`` → `.stale`
+    /// - ``FlagsClientState/error`` → `.error`
+    /// - ``FlagsClientState/notReady`` → filtered (SDK handles via blocking `initialize()`)
+    /// - ``FlagsClientState/reconciling`` → filtered (SDK emits `PROVIDER_RECONCILING`)
     public func observe() -> AnyPublisher<ProviderEvent?, Never> {
-        // For now, return an empty publisher
-        // This should be implemented when Datadog client supports events
-        return Empty<ProviderEvent?, Never>().eraseToAnyPublisher()
+        let subject = PassthroughSubject<ProviderEvent?, Never>()
+        let listener = ProviderStateListener(subject: subject)
+        flagsClient.state.addListener(listener)
+        self.stateListener = listener
+        return subject.eraseToAnyPublisher()
+    }
+}
+
+/// Bridges ``FlagsStateListener`` to a Combine `PassthroughSubject` for OpenFeature events.
+internal final class ProviderStateListener: FlagsStateListener {
+    private let subject: PassthroughSubject<ProviderEvent?, Never>
+
+    init(subject: PassthroughSubject<ProviderEvent?, Never>) {
+        self.subject = subject
+    }
+
+    func flagsStateDidChange(_ newState: FlagsClientState) {
+        let event: ProviderEvent? = switch newState {
+        case .notReady:
+            nil // SDK handles via blocking initialize()
+        case .reconciling:
+            nil // SDK emits PROVIDER_RECONCILING
+        case .ready:
+            .ready
+        case .stale:
+            .stale
+        case .error:
+            .error()
+        }
+        if let event {
+            subject.send(event)
+        }
     }
 }

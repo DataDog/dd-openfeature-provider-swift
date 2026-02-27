@@ -165,4 +165,145 @@ internal struct ContextManagementTests {
         #expect(mockFlagsClient.lastSetContext != nil)
         #expect(mockFlagsClient.lastSetContext?.targetingKey == "user123")
     }
+
+    @Test("Initialize does not throw when state is stale")
+    func initializeDoesNotThrowWhenStale() async throws {
+        // Given
+        let mockFlagsClient = DatadogFlagsClientMock()
+        mockFlagsClient.setEvaluationContextResult = .failure(.networkError(URLError(.notConnectedToInternet)))
+        mockFlagsClient.mockStateManager.simulateStateChange(.stale)
+        let provider = DatadogProvider(flagsClient: mockFlagsClient)
+        let context = MutableContext(targetingKey: "user123")
+
+        // When/Then — should not throw because we're in stale state (cached flags available)
+        try await provider.initialize(initialContext: context)
+    }
+
+    @Test("Initialize throws when state is error")
+    func initializeThrowsWhenError() async throws {
+        // Given
+        let mockFlagsClient = DatadogFlagsClientMock()
+        mockFlagsClient.setEvaluationContextResult = .failure(.networkError(URLError(.notConnectedToInternet)))
+        mockFlagsClient.mockStateManager.simulateStateChange(.error)
+        let provider = DatadogProvider(flagsClient: mockFlagsClient)
+        let context = MutableContext(targetingKey: "user123")
+
+        // When/Then — should throw because we're in error state (no cached flags)
+        await #expect(throws: FlagsError.self) {
+            try await provider.initialize(initialContext: context)
+        }
+    }
+
+    @Test("onContextSet does not throw when state is stale")
+    func onContextSetDoesNotThrowWhenStale() async throws {
+        // Given
+        let mockFlagsClient = DatadogFlagsClientMock()
+        mockFlagsClient.setEvaluationContextResult = .failure(.networkError(URLError(.timedOut)))
+        mockFlagsClient.mockStateManager.simulateStateChange(.stale)
+        let provider = DatadogProvider(flagsClient: mockFlagsClient)
+        let oldContext = MutableContext(targetingKey: "user123")
+        let newContext = MutableContext(targetingKey: "user456")
+
+        // When/Then — should not throw because we're in stale state
+        try await provider.onContextSet(oldContext: oldContext, newContext: newContext)
+    }
+}
+
+@Suite("DatadogProvider State Events")
+internal struct StateEventTests {
+    @Test("observe() emits .ready when state transitions to ready")
+    func observeEmitsReady() async throws {
+        // Given
+        let mockFlagsClient = DatadogFlagsClientMock()
+        let provider = DatadogProvider(flagsClient: mockFlagsClient)
+        var receivedEvents: [ProviderEvent] = []
+        let cancellable = provider.observe().sink { event in
+            if let event { receivedEvents.append(event) }
+        }
+
+        // When
+        mockFlagsClient.mockStateManager.simulateStateChange(.ready)
+
+        // Then
+        #expect(receivedEvents.contains(.ready))
+        _ = cancellable
+    }
+
+    @Test("observe() emits .stale when state transitions to stale")
+    func observeEmitsStale() async throws {
+        // Given
+        let mockFlagsClient = DatadogFlagsClientMock()
+        let provider = DatadogProvider(flagsClient: mockFlagsClient)
+        var receivedEvents: [ProviderEvent] = []
+        let cancellable = provider.observe().sink { event in
+            if let event { receivedEvents.append(event) }
+        }
+
+        // When
+        mockFlagsClient.mockStateManager.simulateStateChange(.stale)
+
+        // Then
+        #expect(receivedEvents.contains(.stale))
+        _ = cancellable
+    }
+
+    @Test("observe() emits .error when state transitions to error")
+    func observeEmitsError() async throws {
+        // Given
+        let mockFlagsClient = DatadogFlagsClientMock()
+        let provider = DatadogProvider(flagsClient: mockFlagsClient)
+        var receivedEvents: [ProviderEvent] = []
+        let cancellable = provider.observe().sink { event in
+            if let event { receivedEvents.append(event) }
+        }
+
+        // When
+        mockFlagsClient.mockStateManager.simulateStateChange(.error)
+
+        // Then
+        #expect(receivedEvents.contains(where: { if case .error = $0 { return true } else { return false } }))
+        _ = cancellable
+    }
+
+    @Test("observe() filters notReady and reconciling states")
+    func observeFiltersNotReadyAndReconciling() async throws {
+        // Given
+        let mockFlagsClient = DatadogFlagsClientMock()
+        let provider = DatadogProvider(flagsClient: mockFlagsClient)
+        var receivedEvents: [ProviderEvent] = []
+        let cancellable = provider.observe().sink { event in
+            if let event { receivedEvents.append(event) }
+        }
+
+        // When
+        mockFlagsClient.mockStateManager.simulateStateChange(.notReady)
+        mockFlagsClient.mockStateManager.simulateStateChange(.reconciling)
+
+        // Then — neither should produce events
+        #expect(receivedEvents.isEmpty)
+        _ = cancellable
+    }
+
+    @Test("observe() emits full state transition sequence")
+    func observeEmitsFullSequence() async throws {
+        // Given
+        let mockFlagsClient = DatadogFlagsClientMock()
+        let provider = DatadogProvider(flagsClient: mockFlagsClient)
+        var receivedEvents: [ProviderEvent] = []
+        let cancellable = provider.observe().sink { event in
+            if let event { receivedEvents.append(event) }
+        }
+
+        // When — simulate: notReady -> reconciling -> ready -> reconciling -> stale
+        mockFlagsClient.mockStateManager.simulateStateChange(.reconciling)
+        mockFlagsClient.mockStateManager.simulateStateChange(.ready)
+        mockFlagsClient.mockStateManager.simulateStateChange(.reconciling)
+        mockFlagsClient.mockStateManager.simulateStateChange(.stale)
+
+        // Then — only ready and stale should be emitted
+        #expect(receivedEvents.count == 2)
+        #expect(receivedEvents[0] == .ready)
+        #expect(receivedEvents[1] == .stale)
+        _ = cancellable
+    }
 }

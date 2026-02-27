@@ -20,6 +20,10 @@ internal class DatadogFlagsClientMock: FlagsClientProtocol {
 
     private var flags: [String: FlagData] = [:]
     var lastSetContext: FlagsEvaluationContext?
+    let mockStateManager = MockFlagsStateObservable()
+    var setEvaluationContextResult: Result<Void, FlagsError> = .success(())
+
+    var state: FlagsStateObservable { mockStateManager }
 
     func setupFlag(key: String, value: AnyValue, variant: String? = nil, reason: String? = nil) {
         flags[key] = FlagData(value: value, variant: variant, reason: reason)
@@ -27,7 +31,7 @@ internal class DatadogFlagsClientMock: FlagsClientProtocol {
 
     func setEvaluationContext(_ context: FlagsEvaluationContext, completion: @escaping (Result<Void, FlagsError>) -> Void) {
         lastSetContext = context
-        completion(.success(()))
+        completion(setEvaluationContextResult)
     }
 
     func getDetails<T>(key: String, defaultValue: T) -> FlagDetails<T> where T: Equatable, T: FlagValue {
@@ -66,5 +70,30 @@ internal class DatadogFlagsClientMock: FlagsClientProtocol {
         default:
             return nil
         }
+    }
+}
+
+// MARK: - Mock State Observable
+
+internal class MockFlagsStateObservable: FlagsStateObservable {
+    private(set) var _currentState: FlagsClientState = .notReady
+    private var listeners: [FlagsStateListener] = []
+
+    var currentState: FlagsClientState { _currentState }
+
+    func simulateStateChange(_ newState: FlagsClientState) {
+        _currentState = newState
+        for listener in listeners {
+            listener.flagsStateDidChange(newState)
+        }
+    }
+
+    func addListener(_ listener: FlagsStateListener) {
+        listeners.append(listener)
+        listener.flagsStateDidChange(_currentState)
+    }
+
+    func removeListener(_ listener: FlagsStateListener) {
+        listeners.removeAll { $0 === listener }
     }
 }
