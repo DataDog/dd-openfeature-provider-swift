@@ -105,14 +105,11 @@ internal struct ProviderMetadataTests {
 
     @Test("Provider with default constructor")
     func providerWithDefaultConstructor() async throws {
-        // Test the public constructor with default parameters
-        // In test environment without proper initialization, this returns NOPFlagsClient
         let provider = DatadogProvider()
         #expect(provider.metadata.name == "datadog")
 
-        // Verify it handles flag evaluation gracefully with NOPFlagsClient
         let result = try provider.getBooleanEvaluation(key: "test-flag", defaultValue: false, context: nil)
-        #expect(result.value == false) // default value
+        #expect(result.value == false)
     }
 
     @Test("Empty metadata in evaluation results")
@@ -121,8 +118,6 @@ internal struct ProviderMetadataTests {
         mockFlagsClient.setupFlag(key: "test-flag", value: AnyValue.bool(true), variant: "on", reason: "targeting_match")
 
         let provider = DatadogProvider(flagsClient: mockFlagsClient)
-
-        // Create context with targeting key and attributes
         let context = MutableContext(
             targetingKey: "user456",
             structure: MutableStructure(attributes: [
@@ -133,12 +128,9 @@ internal struct ProviderMetadataTests {
 
         let result = try provider.getBooleanEvaluation(key: "test-flag", defaultValue: false, context: context)
 
-        // Verify basic flag evaluation
         #expect(result.value == true)
         #expect(result.variant == "on")
         #expect(result.reason == "targeting_match")
-
-        // Verify metadata is empty as expected
         #expect(result.flagMetadata.isEmpty)
     }
 }
@@ -175,7 +167,7 @@ internal struct ContextManagementTests {
         let provider = DatadogProvider(flagsClient: mockFlagsClient)
         let context = MutableContext(targetingKey: "user123")
 
-        // When/Then — should not throw because we're in stale state (cached flags available)
+        // When/Then
         try await provider.initialize(initialContext: context)
     }
 
@@ -188,7 +180,7 @@ internal struct ContextManagementTests {
         let provider = DatadogProvider(flagsClient: mockFlagsClient)
         let context = MutableContext(targetingKey: "user123")
 
-        // When/Then — should throw because we're in error state (no cached flags)
+        // When/Then
         await #expect(throws: FlagsError.self) {
             try await provider.initialize(initialContext: context)
         }
@@ -204,7 +196,7 @@ internal struct ContextManagementTests {
         let oldContext = MutableContext(targetingKey: "user123")
         let newContext = MutableContext(targetingKey: "user456")
 
-        // When/Then — should not throw because we're in stale state
+        // When/Then
         try await provider.onContextSet(oldContext: oldContext, newContext: newContext)
     }
 }
@@ -261,7 +253,13 @@ internal struct StateEventTests {
         mockFlagsClient.mockStateManager.simulateStateChange(.error)
 
         // Then
-        #expect(receivedEvents.contains(where: { if case .error = $0 { return true } else { return false } }))
+        #expect(receivedEvents.contains(where: {
+            if case .error = $0 {
+                return true
+            } else {
+                return false
+            }
+        }))
         _ = cancellable
     }
 
@@ -279,7 +277,7 @@ internal struct StateEventTests {
         mockFlagsClient.mockStateManager.simulateStateChange(.notReady)
         mockFlagsClient.mockStateManager.simulateStateChange(.reconciling)
 
-        // Then — neither should produce events
+        // Then
         #expect(receivedEvents.isEmpty)
         _ = cancellable
     }
@@ -294,13 +292,13 @@ internal struct StateEventTests {
             if let event { receivedEvents.append(event) }
         }
 
-        // When — simulate: notReady -> reconciling -> ready -> reconciling -> stale
+        // When
         mockFlagsClient.mockStateManager.simulateStateChange(.reconciling)
         mockFlagsClient.mockStateManager.simulateStateChange(.ready)
         mockFlagsClient.mockStateManager.simulateStateChange(.reconciling)
         mockFlagsClient.mockStateManager.simulateStateChange(.stale)
 
-        // Then — only ready and stale should be emitted
+        // Then
         #expect(receivedEvents.count == 2)
         #expect(receivedEvents[0] == .ready)
         #expect(receivedEvents[1] == .stale)
