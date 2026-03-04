@@ -15,7 +15,6 @@ public class DatadogProvider: FeatureProvider {
     public let metadata: ProviderMetadata
 
     private let flagsClient: FlagsClientProtocol
-    private var stateListener: ProviderStateListener?
 
     public init(
         name: String = FlagsClient.defaultName,
@@ -94,11 +93,31 @@ internal struct DatadogProviderMetadata: ProviderMetadata {
 
 extension DatadogProvider: EventPublisher {
     public func observe() -> AnyPublisher<ProviderEvent?, Never> {
-        let subject = PassthroughSubject<ProviderEvent?, Never>()
-        let listener = ProviderStateListener(subject: subject)
-        flagsClient.state.addListener(listener)
-        self.stateListener = listener
-        return subject.eraseToAnyPublisher()
+        Deferred { [flagsClient] in
+            let subject = PassthroughSubject<ProviderEvent?, Never>()
+            let listener = ProviderStateListener(subject: subject)
+            let initialEvent = Self.mapStateToEvent(flagsClient.state.currentState)
+            flagsClient.state.addListener(listener)
+            return subject
+                .prepend(initialEvent)
+                .handleEvents(receiveCancel: {
+                    flagsClient.state.removeListener(listener)
+                })
+        }
+        .eraseToAnyPublisher()
+    }
+
+    static func mapStateToEvent(_ state: FlagsClientState) -> ProviderEvent? {
+        switch state {
+        case .notReady, .reconciling:
+            nil
+        case .ready:
+            .ready
+        case .stale:
+            .stale
+        case .error:
+            .error()
+        }
     }
 }
 
@@ -110,17 +129,7 @@ internal final class ProviderStateListener: FlagsStateListener {
     }
 
     func flagsStateDidChange(_ newState: FlagsClientState) {
-        let event: ProviderEvent? = switch newState {
-        case .notReady, .reconciling:
-            nil
-        case .ready:
-            .ready
-        case .stale:
-            .stale
-        case .error:
-            .error()
-        }
-        if let event {
+        if let event = DatadogProvider.mapStateToEvent(newState) {
             subject.send(event)
         }
     }

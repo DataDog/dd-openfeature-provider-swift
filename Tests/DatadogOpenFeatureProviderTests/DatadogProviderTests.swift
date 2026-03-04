@@ -304,4 +304,46 @@ internal struct StateEventTests {
         #expect(receivedEvents[1] == .stale)
         _ = cancellable
     }
+
+    @Test("observe() supports multiple concurrent observers")
+    func observeSupportsMultipleObservers() async throws {
+        // Given
+        let mockFlagsClient = DatadogFlagsClientMock()
+        let provider = DatadogProvider(flagsClient: mockFlagsClient)
+        var events1: [ProviderEvent] = []
+        var events2: [ProviderEvent] = []
+        let cancellable1 = provider.observe().sink { event in
+            if let event { events1.append(event) }
+        }
+        let cancellable2 = provider.observe().sink { event in
+            if let event { events2.append(event) }
+        }
+
+        // When
+        mockFlagsClient.mockStateManager.simulateStateChange(.ready)
+
+        // Then
+        #expect(events1.contains(.ready))
+        #expect(events2.contains(.ready))
+        _ = cancellable1
+        _ = cancellable2
+    }
+
+    @Test("observe() receives initial state on subscription")
+    func observeReceivesInitialState() async throws {
+        // Given
+        let mockFlagsClient = DatadogFlagsClientMock()
+        mockFlagsClient.mockStateManager.simulateStateChange(.ready)
+        let provider = DatadogProvider(flagsClient: mockFlagsClient)
+        var receivedEvents: [ProviderEvent] = []
+
+        // When
+        let cancellable = provider.observe().sink { event in
+            if let event { receivedEvents.append(event) }
+        }
+
+        // Then
+        #expect(receivedEvents.contains(.ready))
+        _ = cancellable
+    }
 }
