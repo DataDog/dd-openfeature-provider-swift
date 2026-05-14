@@ -1,5 +1,7 @@
 # Unreleased
 
+- [FEATURE] Implement `observe()` and STALE state support. See [#21]
+
 # 0.1.0 / 2026-01-14
 
 Initial release of Datadog's Provider for the OpenFeature iOS SDK.
