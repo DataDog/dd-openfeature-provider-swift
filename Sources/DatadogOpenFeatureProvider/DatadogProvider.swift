@@ -43,13 +43,13 @@ public class DatadogProvider: FeatureProvider {
     }
 
     private func setEvaluationContextAsync(_ context: FlagsEvaluationContext) async throws {
-        return try await withCheckedThrowingContinuation { continuation in
-            flagsClient.setEvaluationContext(context) { [weak self] result in
+        return try await withCheckedThrowingContinuation { [flagsClient] continuation in
+            flagsClient.setEvaluationContext(context) { result in
                 switch result {
                 case .success:
                     continuation.resume()
                 case .failure(let error):
-                    if self?.flagsClient.state.currentState == .stale {
+                    if flagsClient.state.currentState == .stale {
                         continuation.resume()
                     } else {
                         continuation.resume(throwing: error)
