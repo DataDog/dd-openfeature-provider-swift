@@ -1,6 +1,15 @@
 {
   "pins" : [
     {
+      "identity" : "dd-sdk-ios",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/DataDog/dd-sdk-ios.git",
+      "state" : {
+        "branch" : "typo/thread-allocation-key-to-flag-details-metadata",
+        "revision" : "4e115288e34e1eb319027dbc306e01075d523c0b"
+      }
+    },
+    {
       "identity" : "kscrash",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/kstenerud/KSCrash.git",
