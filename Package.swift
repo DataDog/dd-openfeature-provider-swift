@@ -7,9 +7,10 @@ let package = Package(
     name: "DatadogOpenFeatureProvider",
     platforms: [
         .iOS(.v14),
-        .macOS(.v12),
+        .macOS("12.6"),
         .watchOS(.v7),
         .tvOS(.v14),
+        .visionOS(.v1),
     ],
     products: [
         .library(
