@@ -19,7 +19,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/open-feature/swift-sdk.git", "0.3.0"..<"0.4.0"),
-        .package(url: "https://github.com/DataDog/dd-sdk-ios.git", from: "3.2.0"),
+        .package(path: "/Users/tyler.potter/dd/dd-sdk-ios"),
     ],
     targets: [
         .target(

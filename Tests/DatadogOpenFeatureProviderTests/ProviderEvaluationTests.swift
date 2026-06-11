@@ -207,6 +207,39 @@ internal struct ComplexValueEvaluationTests {
     }
 }
 
+@Suite("ProviderEvaluation Metadata")
+internal struct ProviderEvaluationMetadataTests {
+    @Test("Metadata threaded into flagMetadata")
+    func metadataThreadedIntoFlagMetadata() async throws {
+        let flagDetails = FlagDetails<Bool>(
+            key: "test-flag",
+            value: true,
+            variant: "on",
+            reason: "targeting_match",
+            metadata: ["allocationKey": "alloc-abc", "version": "2"]
+        )
+
+        let evaluation = ProviderEvaluation(flagDetails)
+
+        #expect(evaluation.flagMetadata["allocationKey"] == FlagMetadataValue.string("alloc-abc"))
+        #expect(evaluation.flagMetadata["version"] == FlagMetadataValue.string("2"))
+    }
+
+    @Test("Empty metadata produces empty flagMetadata")
+    func emptyMetadataProducesEmptyFlagMetadata() async throws {
+        let flagDetails = FlagDetails<Bool>(
+            key: "test-flag",
+            value: true,
+            variant: "on",
+            reason: "default"
+        )
+
+        let evaluation = ProviderEvaluation(flagDetails)
+
+        #expect(evaluation.flagMetadata.isEmpty)
+    }
+}
+
 @Suite("ProviderEvaluation Edge Cases")
 internal struct ProviderEvaluationEdgeCaseTests {
     @Test("Evaluation with nil variant and reason")

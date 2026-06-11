@@ -8,6 +8,24 @@ import Foundation
 import DatadogFlags
 import OpenFeature
 
+// MARK: - Private Helpers
+
+private extension [String: Any] {
+    /// Converts a [String: Any] metadata dictionary to the OpenFeature FlagMetadataValue map.
+    /// Swift Int values are widened to Int64 before conversion since FlagMetadataValue.of()
+    /// only accepts Int64. Entries whose values are not Bool, String, Int/Int64, or Double
+    /// are silently dropped, matching the FlagMetadataValue type contract.
+    func toOpenFeatureFlagMetadata() -> [String: FlagMetadataValue] {
+        reduce(into: [:]) { result, pair in
+            // Widen Swift Int to Int64 so FlagMetadataValue.of() recognises it.
+            let value: Any = (pair.value as? Int).map { Int64($0) } ?? pair.value
+            if let flagMetadataValue = FlagMetadataValue.of(value) {
+                result[pair.key] = flagMetadataValue
+            }
+        }
+    }
+}
+
 // MARK: - ProviderEvaluation Extensions
 
 extension ProviderEvaluation where T == Bool {
@@ -15,7 +33,7 @@ extension ProviderEvaluation where T == Bool {
     init(_ details: FlagDetails<Bool>) {
         self.init(
             value: details.value,
-            flagMetadata: [:],
+            flagMetadata: details.metadata.toOpenFeatureFlagMetadata(),
             variant: details.variant,
             reason: details.reason
         )
@@ -27,7 +45,7 @@ extension ProviderEvaluation where T == String {
     init(_ details: FlagDetails<String>) {
         self.init(
             value: details.value,
-            flagMetadata: [:],
+            flagMetadata: details.metadata.toOpenFeatureFlagMetadata(),
             variant: details.variant,
             reason: details.reason
         )
@@ -39,7 +57,7 @@ extension ProviderEvaluation where T == Double {
     init(_ details: FlagDetails<Double>) {
         self.init(
             value: details.value,
-            flagMetadata: [:],
+            flagMetadata: details.metadata.toOpenFeatureFlagMetadata(),
             variant: details.variant,
             reason: details.reason
         )
@@ -52,7 +70,7 @@ extension ProviderEvaluation where T == Int64 {
     init(_ details: FlagDetails<Int>) {
         self.init(
             value: Int64(details.value),
-            flagMetadata: [:],
+            flagMetadata: details.metadata.toOpenFeatureFlagMetadata(),
             variant: details.variant,
             reason: details.reason
         )
@@ -65,7 +83,7 @@ extension ProviderEvaluation where T == Value {
     init(_ details: FlagDetails<AnyValue>) {
         self.init(
             value: Value(details.value),
-            flagMetadata: [:],
+            flagMetadata: details.metadata.toOpenFeatureFlagMetadata(),
             variant: details.variant,
             reason: details.reason
         )
