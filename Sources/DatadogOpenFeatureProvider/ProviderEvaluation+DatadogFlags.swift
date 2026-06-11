@@ -10,17 +10,18 @@ import OpenFeature
 
 // MARK: - Private Helpers
 
-private extension [String: Any] {
-    /// Converts a [String: Any] metadata dictionary to the OpenFeature FlagMetadataValue map.
-    /// Swift Int values are widened to Int64 before conversion since FlagMetadataValue.of()
-    /// only accepts Int64. Entries whose values are not Bool, String, Int/Int64, or Double
-    /// are silently dropped, matching the FlagMetadataValue type contract.
+private extension [String: AnyValue] {
+    /// Converts an AnyValue metadata dictionary to the OpenFeature FlagMetadataValue map.
+    /// Complex types (.dictionary, .array, .null) are dropped since FlagMetadataValue
+    /// only supports Bool, String, Int64, and Double primitives.
     func toOpenFeatureFlagMetadata() -> [String: FlagMetadataValue] {
         reduce(into: [:]) { result, pair in
-            // Widen Swift Int to Int64 so FlagMetadataValue.of() recognises it.
-            let value: Any = (pair.value as? Int).map { Int64($0) } ?? pair.value
-            if let flagMetadataValue = FlagMetadataValue.of(value) {
-                result[pair.key] = flagMetadataValue
+            switch pair.value {
+            case .string(let s): result[pair.key] = FlagMetadataValue.of(s)
+            case .bool(let b): result[pair.key] = FlagMetadataValue.of(b)
+            case .int(let i): result[pair.key] = FlagMetadataValue.of(Int64(i))
+            case .double(let d): result[pair.key] = FlagMetadataValue.of(d)
+            default: break // .dictionary, .array, .null not representable as FlagMetadataValue
             }
         }
     }

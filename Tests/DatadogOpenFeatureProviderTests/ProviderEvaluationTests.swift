@@ -216,7 +216,7 @@ internal struct ProviderEvaluationMetadataTests {
             value: true,
             variant: "on",
             reason: "targeting_match",
-            metadata: ["allocationKey": "alloc-abc", "version": "2"]
+            metadata: ["allocationKey": .string("alloc-abc"), "version": .string("2")]
         )
 
         let evaluation = ProviderEvaluation(flagDetails)
