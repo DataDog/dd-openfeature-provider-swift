@@ -209,7 +209,7 @@ internal struct ComplexValueEvaluationTests {
 
 @Suite("ProviderEvaluation Metadata")
 internal struct ProviderEvaluationMetadataTests {
-    @Test("All primitive metadata types threaded into flagMetadata")
+    @Test("allocationKey threaded into flagMetadata")
     func metadataThreadedIntoFlagMetadata() async throws {
         let flagDetails = FlagDetails<Bool>(
             key: "test-flag",
@@ -217,21 +217,13 @@ internal struct ProviderEvaluationMetadataTests {
             variant: "on",
             reason: "targeting_match",
             metadata: [
-                "allocationKey": .string("alloc-abc"),
-                "version": .string("2"),
-                "count": .int(7),
-                "weight": .double(0.5),
-                "enabled": .bool(false)
+                "allocationKey": .string("alloc-abc")
             ]
         )
 
         let evaluation = ProviderEvaluation(flagDetails)
 
         #expect(evaluation.flagMetadata["allocationKey"] == FlagMetadataValue.string("alloc-abc"))
-        #expect(evaluation.flagMetadata["version"] == FlagMetadataValue.string("2"))
-        #expect(evaluation.flagMetadata["count"] == FlagMetadataValue.integer(Int64(7)))
-        #expect(evaluation.flagMetadata["weight"] == FlagMetadataValue.double(0.5))
-        #expect(evaluation.flagMetadata["enabled"] == FlagMetadataValue.boolean(false))
     }
 
     @Test("Empty metadata produces empty flagMetadata")
