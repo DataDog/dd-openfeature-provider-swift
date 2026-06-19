@@ -217,13 +217,19 @@ internal struct ProviderEvaluationMetadataTests {
             variant: "on",
             reason: "targeting_match",
             metadata: [
-                "allocationKey": .string("alloc-abc")
+                "allocationKey": .string("alloc-abc"),
+                "isExperiment": .bool(true),
+                "bucketIndex": .int(42),
+                "samplingRate": .double(3.14),
             ]
         )
 
         let evaluation = ProviderEvaluation(flagDetails)
 
         #expect(evaluation.flagMetadata["allocationKey"] == FlagMetadataValue.string("alloc-abc"))
+        #expect(evaluation.flagMetadata["isExperiment"] == FlagMetadataValue.boolean(true))
+        #expect(evaluation.flagMetadata["bucketIndex"] == FlagMetadataValue.integer(Int64(42)))
+        #expect(evaluation.flagMetadata["samplingRate"] == FlagMetadataValue.double(3.14))
     }
 
     @Test("Empty metadata produces empty flagMetadata")
