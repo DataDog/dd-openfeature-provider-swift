@@ -8,25 +8,6 @@ import Foundation
 import DatadogFlags
 import OpenFeature
 
-// MARK: - Private Helpers
-
-private extension [String: AnyValue] {
-    /// Converts an AnyValue metadata dictionary to the OpenFeature FlagMetadataValue map.
-    /// Complex types (.dictionary, .array, .null) are dropped since FlagMetadataValue
-    /// only supports Bool, String, Int64, and Double primitives.
-    func toOpenFeatureFlagMetadata() -> [String: FlagMetadataValue] {
-        reduce(into: [:]) { result, pair in
-            switch pair.value {
-            case .string(let s): result[pair.key] = FlagMetadataValue.of(s)
-            case .bool(let b): result[pair.key] = FlagMetadataValue.of(b)
-            case .int(let i): result[pair.key] = FlagMetadataValue.of(Int64(i))
-            case .double(let d): result[pair.key] = FlagMetadataValue.of(d)
-            default: break // .dictionary, .array, .null not representable as FlagMetadataValue
-            }
-        }
-    }
-}
-
 // MARK: - ProviderEvaluation Extensions
 
 extension ProviderEvaluation where T == Bool {
@@ -34,7 +15,7 @@ extension ProviderEvaluation where T == Bool {
     init(_ details: FlagDetails<Bool>) {
         self.init(
             value: details.value,
-            flagMetadata: details.metadata.toOpenFeatureFlagMetadata(),
+            flagMetadata: details.allocationKey.isEmpty ? nil : ["allocationKey": FlagMetadataValue.string(details.allocationKey)],
             variant: details.variant,
             reason: details.reason
         )
@@ -46,7 +27,7 @@ extension ProviderEvaluation where T == String {
     init(_ details: FlagDetails<String>) {
         self.init(
             value: details.value,
-            flagMetadata: details.metadata.toOpenFeatureFlagMetadata(),
+            flagMetadata: details.allocationKey.isEmpty ? nil : ["allocationKey": FlagMetadataValue.string(details.allocationKey)],
             variant: details.variant,
             reason: details.reason
         )
@@ -58,7 +39,7 @@ extension ProviderEvaluation where T == Double {
     init(_ details: FlagDetails<Double>) {
         self.init(
             value: details.value,
-            flagMetadata: details.metadata.toOpenFeatureFlagMetadata(),
+            flagMetadata: details.allocationKey.isEmpty ? nil : ["allocationKey": FlagMetadataValue.string(details.allocationKey)],
             variant: details.variant,
             reason: details.reason
         )
@@ -71,7 +52,7 @@ extension ProviderEvaluation where T == Int64 {
     init(_ details: FlagDetails<Int>) {
         self.init(
             value: Int64(details.value),
-            flagMetadata: details.metadata.toOpenFeatureFlagMetadata(),
+            flagMetadata: details.allocationKey.isEmpty ? nil : ["allocationKey": FlagMetadataValue.string(details.allocationKey)],
             variant: details.variant,
             reason: details.reason
         )
@@ -84,7 +65,7 @@ extension ProviderEvaluation where T == Value {
     init(_ details: FlagDetails<AnyValue>) {
         self.init(
             value: Value(details.value),
-            flagMetadata: details.metadata.toOpenFeatureFlagMetadata(),
+            flagMetadata: details.allocationKey.isEmpty ? nil : ["allocationKey": FlagMetadataValue.string(details.allocationKey)],
             variant: details.variant,
             reason: details.reason
         )
