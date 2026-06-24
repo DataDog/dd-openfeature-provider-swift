@@ -6,7 +6,7 @@
       "location" : "https://github.com/DataDog/dd-sdk-ios.git",
       "state" : {
         "branch" : "typo/thread-allocation-key-to-flag-details-metadata",
-        "revision" : "608d7b7c0b700f2bb48304764502b95e431a92c6"
+        "revision" : "ba571f7cca04dde31b33cee6f37b5e3ec55c73ac"
       }
     },
     {
