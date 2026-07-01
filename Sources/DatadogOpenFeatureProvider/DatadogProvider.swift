@@ -55,6 +55,11 @@ public class DatadogProvider: FeatureProvider {
                     // completion. Verified against dd-sdk-ios 3.11.0. A refactor on either side
                     // that reorders the state update relative to the callback would silently
                     // break this check.
+                    //
+                    // This also assumes context-set calls do not overlap: `currentState` is
+                    // global to the client, so a concurrent `setEvaluationContext` could leave
+                    // it reflecting the other call's outcome. OpenFeature serializes context
+                    // changes, so this holds in practice.
                     if flagsClient.state.currentState == .stale {
                         // The client fell back to cached flags, so treat the context change as
                         // a success and surface staleness via `observe()` (matches Android).
@@ -113,6 +118,10 @@ extension DatadogProvider: EventPublisher {
             // next transition.
             //
             // Delivers the initial state on subscription per OpenFeature Requirement 5.3.3.
+            //
+            // `listener` is retained solely by the subscription, via the `handleEvents` cancel
+            // closure below (the client holds it weakly). When the subscriber cancels or
+            // releases the subscription, the listener is removed and deallocated.
             let subject = CurrentValueSubject<ProviderEvent?, Never>(nil)
             let listener = ProviderStateListener(subject: subject)
             flagsClient.state.addListener(listener)
@@ -133,12 +142,14 @@ extension DatadogProvider: EventPublisher {
         case .stale:
             .stale
         case .error:
+            // `FlagsClientState` carries no error payload, so the emitted `.error` event
+            // intentionally has no code or message.
             .error()
         }
     }
 }
 
-internal final class ProviderStateListener: FlagsStateListener {
+private final class ProviderStateListener: FlagsStateListener {
     private let subject: CurrentValueSubject<ProviderEvent?, Never>
 
     init(subject: CurrentValueSubject<ProviderEvent?, Never>) {
