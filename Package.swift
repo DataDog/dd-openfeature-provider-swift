@@ -20,7 +20,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/open-feature/swift-sdk.git", "0.3.0"..<"0.4.0"),
-        .package(url: "https://github.com/DataDog/dd-sdk-ios.git", branch: "typo/thread-allocation-key-to-flag-details-metadata"),
+        .package(url: "https://github.com/DataDog/dd-sdk-ios.git", from: "3.13.0"),
     ],
     targets: [
         .target(
