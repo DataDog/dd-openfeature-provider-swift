@@ -49,7 +49,15 @@ public class DatadogProvider: FeatureProvider {
                 case .success:
                     continuation.resume()
                 case .failure(let error):
+                    // Reading `state.currentState` here relies on a load-bearing ordering
+                    // guarantee: upstream `FlagsRepository.setEvaluationContext` updates the
+                    // state (to `.stale` or `.error`) *before* invoking this failure
+                    // completion. Verified against dd-sdk-ios 3.11.0. A refactor on either side
+                    // that reorders the state update relative to the callback would silently
+                    // break this check.
                     if flagsClient.state.currentState == .stale {
+                        // The client fell back to cached flags, so treat the context change as
+                        // a success and surface staleness via `observe()` (matches Android).
                         continuation.resume()
                     } else {
                         continuation.resume(throwing: error)
@@ -94,12 +102,21 @@ internal struct DatadogProviderMetadata: ProviderMetadata {
 extension DatadogProvider: EventPublisher {
     public func observe() -> AnyPublisher<ProviderEvent?, Never> {
         Deferred { [flagsClient] in
-            let subject = PassthroughSubject<ProviderEvent?, Never>()
+            // Seed a `CurrentValueSubject` and let `addListener` populate the initial value.
+            // `addListener` synchronously calls `flagsStateDidChange` with the current state,
+            // so the initial event is captured atomically with listener registration.
+            //
+            // Reading `currentState` separately and using `.prepend` instead would open a
+            // race: if the state changed between that read and `addListener`, the prepended
+            // snapshot would be stale while the listener's immediate callback would be dropped
+            // (no subscriber yet), leaving the subscriber stuck on the wrong state until the
+            // next transition.
+            //
+            // Delivers the initial state on subscription per OpenFeature Requirement 5.3.3.
+            let subject = CurrentValueSubject<ProviderEvent?, Never>(nil)
             let listener = ProviderStateListener(subject: subject)
-            let initialEvent = Self.mapStateToEvent(flagsClient.state.currentState)
             flagsClient.state.addListener(listener)
             return subject
-                .prepend(initialEvent)
                 .handleEvents(receiveCancel: {
                     flagsClient.state.removeListener(listener)
                 })
@@ -107,7 +124,7 @@ extension DatadogProvider: EventPublisher {
         .eraseToAnyPublisher()
     }
 
-    static func mapStateToEvent(_ state: FlagsClientState) -> ProviderEvent? {
+    fileprivate static func mapStateToEvent(_ state: FlagsClientState) -> ProviderEvent? {
         switch state {
         case .notReady, .reconciling:
             nil
@@ -122,9 +139,9 @@ extension DatadogProvider: EventPublisher {
 }
 
 internal final class ProviderStateListener: FlagsStateListener {
-    private let subject: PassthroughSubject<ProviderEvent?, Never>
+    private let subject: CurrentValueSubject<ProviderEvent?, Never>
 
-    init(subject: PassthroughSubject<ProviderEvent?, Never>) {
+    init(subject: CurrentValueSubject<ProviderEvent?, Never>) {
         self.subject = subject
     }
 

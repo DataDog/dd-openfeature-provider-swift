@@ -75,25 +75,49 @@ internal class DatadogFlagsClientMock: FlagsClientProtocol {
 
 // MARK: - Mock State Observable
 
+/// Mirrors production `FlagsStateManager`: listeners are held weakly and unchanged state
+/// transitions are deduplicated, so tests exercise the same lifecycle and notification
+/// semantics as the SDK rather than diverging behavior that could mask a production regression.
 internal class MockFlagsStateObservable: FlagsStateObservable {
+    /// Weak wrapper mirroring production's `WeakListener`, so a listener retained only by its
+    /// subscription is released once that subscription goes away.
+    private struct WeakListener {
+        weak var value: FlagsStateListener?
+
+        init(_ value: FlagsStateListener) {
+            self.value = value
+        }
+    }
+
     private(set) var _currentState: FlagsClientState = .notReady
-    private var listeners: [FlagsStateListener] = []
+    private var listeners: [WeakListener] = []
 
     var currentState: FlagsClientState { _currentState }
 
+    /// Number of live (non-deallocated) listeners. Used by tests to assert cleanup on cancel.
+    var listenerCount: Int {
+        listeners.filter { $0.value != nil }.count
+    }
+
     func simulateStateChange(_ newState: FlagsClientState) {
+        // Mirror production `FlagsStateManager.updateState`, which early-returns when the
+        // state is unchanged.
+        guard newState != _currentState else {
+            return
+        }
         _currentState = newState
-        for listener in listeners {
-            listener.flagsStateDidChange(newState)
+        for weakListener in listeners {
+            weakListener.value?.flagsStateDidChange(newState)
         }
     }
 
     func addListener(_ listener: FlagsStateListener) {
-        listeners.append(listener)
+        listeners.removeAll { $0.value == nil }
+        listeners.append(WeakListener(listener))
         listener.flagsStateDidChange(_currentState)
     }
 
     func removeListener(_ listener: FlagsStateListener) {
-        listeners.removeAll { $0 === listener }
+        listeners.removeAll { $0.value === listener || $0.value == nil }
     }
 }

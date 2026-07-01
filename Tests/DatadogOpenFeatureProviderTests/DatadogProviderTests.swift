@@ -199,6 +199,22 @@ internal struct ContextManagementTests {
         // When/Then
         try await provider.onContextSet(oldContext: oldContext, newContext: newContext)
     }
+
+    @Test("onContextSet throws when state is error")
+    func onContextSetThrowsWhenError() async throws {
+        // Given
+        let mockFlagsClient = DatadogFlagsClientMock()
+        mockFlagsClient.setEvaluationContextResult = .failure(.networkError(URLError(.notConnectedToInternet)))
+        mockFlagsClient.mockStateManager.simulateStateChange(.error)
+        let provider = DatadogProvider(flagsClient: mockFlagsClient)
+        let oldContext = MutableContext(targetingKey: "user123")
+        let newContext = MutableContext(targetingKey: "user456")
+
+        // When/Then
+        await #expect(throws: FlagsError.self) {
+            try await provider.onContextSet(oldContext: oldContext, newContext: newContext)
+        }
+    }
 }
 
 @Suite("DatadogProvider State Events")
@@ -343,7 +359,22 @@ internal struct StateEventTests {
         }
 
         // Then
-        #expect(receivedEvents.contains(.ready))
+        #expect(receivedEvents == [.ready])
         _ = cancellable
+    }
+
+    @Test("observe() removes listener on cancellation")
+    func observeRemovesListenerOnCancel() async throws {
+        // Given
+        let mockFlagsClient = DatadogFlagsClientMock()
+        let provider = DatadogProvider(flagsClient: mockFlagsClient)
+
+        // When: subscribing registers exactly one listener
+        let cancellable = provider.observe().sink { _ in }
+        #expect(mockFlagsClient.mockStateManager.listenerCount == 1)
+
+        // Then: cancelling removes it via handleEvents(receiveCancel:)
+        cancellable.cancel()
+        #expect(mockFlagsClient.mockStateManager.listenerCount == 0)
     }
 }
