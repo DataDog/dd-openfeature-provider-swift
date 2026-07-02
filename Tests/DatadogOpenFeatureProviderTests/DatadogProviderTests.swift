@@ -298,6 +298,28 @@ internal struct StateEventTests {
         _ = cancellable
     }
 
+    @Test("observe() does not replay the nil seed for a filtered initial state")
+    func observeSuppressesInitialNilForFilteredState() async throws {
+        // Given a client whose current state maps to no event at subscription time
+        let mockFlagsClient = DatadogFlagsClientMock()
+        mockFlagsClient.mockStateManager.simulateStateChange(.notReady)
+        let provider = DatadogProvider(flagsClient: mockFlagsClient)
+
+        // When — capture the raw optional stream (unlike other tests, do NOT discard nil)
+        var receivedEvents: [ProviderEvent?] = []
+        let cancellable = provider.observe().sink { event in
+            receivedEvents.append(event)
+        }
+
+        // Then — the seeded nil is not replayed for a filtered initial state
+        #expect(receivedEvents.isEmpty)
+
+        // And a subsequent real transition still flows through the filter
+        mockFlagsClient.mockStateManager.simulateStateChange(.ready)
+        #expect(receivedEvents == [.ready])
+        _ = cancellable
+    }
+
     @Test("observe() emits full state transition sequence")
     func observeEmitsFullSequence() async throws {
         // Given

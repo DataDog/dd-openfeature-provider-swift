@@ -119,6 +119,12 @@ extension DatadogProvider: EventPublisher {
             //
             // Delivers the initial state on subscription per OpenFeature Requirement 5.3.3.
             //
+            // The `nil` seed is filtered out below. When the current state maps to no event
+            // (`.notReady`/`.reconciling`), `addListener` sends nothing, so the subject still
+            // holds its seed; dropping `nil` avoids replaying a spurious non-event to new
+            // subscribers during startup. The listener only ever forwards mapped, non-nil
+            // events, so `nil` uniquely identifies the unpopulated seed.
+            //
             // `listener` is retained solely by the subscription, via the `handleEvents` cancel
             // closure below (the client holds it weakly). When the subscriber cancels or
             // releases the subscription, the listener is removed and deallocated.
@@ -126,6 +132,7 @@ extension DatadogProvider: EventPublisher {
             let listener = ProviderStateListener(subject: subject)
             flagsClient.state.addListener(listener)
             return subject
+                .filter { $0 != nil }
                 .handleEvents(receiveCancel: {
                     flagsClient.state.removeListener(listener)
                 })
