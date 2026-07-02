@@ -1,6 +1,6 @@
 abstract_target 'Common' do
   pod 'OpenFeature', '= 0.3.0'
-  pod 'DatadogFlags', '>= 3.2.0'
+  pod 'DatadogFlags', '>= 3.11.0'
   pod 'DatadogOpenFeatureProvider', :git => 'https://github.com/DataDog/dd-openfeature-provider-swift.git', :GIT_REFERENCE
 
   target 'App Dynamic iOS' do

@@ -33,30 +33,40 @@ public class DatadogProvider: FeatureProvider {
     public func initialize(initialContext: EvaluationContext?) async throws {
         if let context = initialContext {
             let ddContext = try FlagsEvaluationContext(context)
-            // Set the context using completion handler
-            return try await withCheckedThrowingContinuation { continuation in
-                flagsClient.setEvaluationContext(ddContext) { result in
-                    switch result {
-                    case .success:
-                        continuation.resume()
-                    case .failure(let error):
-                        continuation.resume(throwing: error)
-                    }
-                }
-            }
+            try await setEvaluationContextAsync(ddContext)
         }
     }
 
     public func onContextSet(oldContext: EvaluationContext?, newContext: EvaluationContext) async throws {
         let ddContext = try FlagsEvaluationContext(newContext)
-        // Set the context using completion handler
-        return try await withCheckedThrowingContinuation { continuation in
-            flagsClient.setEvaluationContext(ddContext) { result in
+        try await setEvaluationContextAsync(ddContext)
+    }
+
+    private func setEvaluationContextAsync(_ context: FlagsEvaluationContext) async throws {
+        return try await withCheckedThrowingContinuation { [flagsClient] continuation in
+            flagsClient.setEvaluationContext(context) { result in
                 switch result {
                 case .success:
                     continuation.resume()
                 case .failure(let error):
-                    continuation.resume(throwing: error)
+                    // Reading `state.currentState` here relies on a load-bearing ordering
+                    // guarantee: upstream `FlagsRepository.setEvaluationContext` updates the
+                    // state (to `.stale` or `.error`) *before* invoking this failure
+                    // completion. Verified against dd-sdk-ios 3.11.0. A refactor on either side
+                    // that reorders the state update relative to the callback would silently
+                    // break this check.
+                    //
+                    // This also assumes context-set calls do not overlap: `currentState` is
+                    // global to the client, so a concurrent `setEvaluationContext` could leave
+                    // it reflecting the other call's outcome. OpenFeature serializes context
+                    // changes, so this holds in practice.
+                    if flagsClient.state.currentState == .stale {
+                        // The client fell back to cached flags, so treat the context change as
+                        // a success and surface staleness via `observe()` (matches Android).
+                        continuation.resume()
+                    } else {
+                        continuation.resume(throwing: error)
+                    }
                 }
             }
         }
@@ -96,8 +106,66 @@ internal struct DatadogProviderMetadata: ProviderMetadata {
 
 extension DatadogProvider: EventPublisher {
     public func observe() -> AnyPublisher<ProviderEvent?, Never> {
-        // For now, return an empty publisher
-        // This should be implemented when Datadog client supports events
-        return Empty<ProviderEvent?, Never>().eraseToAnyPublisher()
+        Deferred { [flagsClient] in
+            // Seed a `CurrentValueSubject` and let `addListener` populate the initial value.
+            // `addListener` synchronously calls `flagsStateDidChange` with the current state,
+            // so the initial event is captured atomically with listener registration.
+            //
+            // Reading `currentState` separately and using `.prepend` instead would open a
+            // race: if the state changed between that read and `addListener`, the prepended
+            // snapshot would be stale while the listener's immediate callback would be dropped
+            // (no subscriber yet), leaving the subscriber stuck on the wrong state until the
+            // next transition.
+            //
+            // Delivers the initial state on subscription per OpenFeature Requirement 5.3.3.
+            //
+            // The `nil` seed is filtered out below. When the current state maps to no event
+            // (`.notReady`/`.reconciling`), `addListener` sends nothing, so the subject still
+            // holds its seed; dropping `nil` avoids replaying a spurious non-event to new
+            // subscribers during startup. The listener only ever forwards mapped, non-nil
+            // events, so `nil` uniquely identifies the unpopulated seed.
+            //
+            // `listener` is retained solely by the subscription, via the `handleEvents` cancel
+            // closure below (the client holds it weakly). When the subscriber cancels or
+            // releases the subscription, the listener is removed and deallocated.
+            let subject = CurrentValueSubject<ProviderEvent?, Never>(nil)
+            let listener = ProviderStateListener(subject: subject)
+            flagsClient.state.addListener(listener)
+            return subject
+                .filter { $0 != nil }
+                .handleEvents(receiveCancel: {
+                    flagsClient.state.removeListener(listener)
+                })
+        }
+        .eraseToAnyPublisher()
+    }
+
+    fileprivate static func mapStateToEvent(_ state: FlagsClientState) -> ProviderEvent? {
+        switch state {
+        case .notReady, .reconciling:
+            nil
+        case .ready:
+            .ready
+        case .stale:
+            .stale
+        case .error:
+            // `FlagsClientState` carries no error payload, so the emitted `.error` event
+            // intentionally has no code or message.
+            .error()
+        }
+    }
+}
+
+private final class ProviderStateListener: FlagsStateListener {
+    private let subject: CurrentValueSubject<ProviderEvent?, Never>
+
+    init(subject: CurrentValueSubject<ProviderEvent?, Never>) {
+        self.subject = subject
+    }
+
+    func flagsStateDidChange(_ newState: FlagsClientState) {
+        if let event = DatadogProvider.mapStateToEvent(newState) {
+            subject.send(event)
+        }
     }
 }
