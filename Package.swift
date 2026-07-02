@@ -10,6 +10,7 @@ let package = Package(
         .macOS("12.6"),
         .watchOS(.v7),
         .tvOS(.v14),
+        .visionOS(.v1),
     ],
     products: [
         .library(
@@ -19,7 +20,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/open-feature/swift-sdk.git", "0.3.0"..<"0.4.0"),
-        .package(url: "https://github.com/DataDog/dd-sdk-ios.git", from: "3.11.0"),
+        .package(url: "https://github.com/DataDog/dd-sdk-ios.git", from: "3.13.0"),
     ],
     targets: [
         .target(

@@ -19,6 +19,6 @@ Pod::Spec.new do |s|
   s.source_files = "Sources/DatadogOpenFeatureProvider/**/*.swift"
 
   s.dependency 'OpenFeature', '~> 0.3.0'
-  s.dependency 'DatadogFlags', '>= 3.11.0'
+  s.dependency 'DatadogFlags', '>= 3.13.0'
 
 end
