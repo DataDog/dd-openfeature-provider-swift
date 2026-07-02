@@ -1,4 +1,4 @@
-# Unreleased
+# 0.2.0 / 2026-07-02
 
 - [FEATURE] Implement `observe()` and STALE state support. See [#21](https://github.com/DataDog/dd-openfeature-provider-swift/pull/21)
 - [CHANGED] Raise the minimum macOS deployment target from 12.0 to 12.6 to match dd-sdk-ios 3.13.0. See [#21](https://github.com/DataDog/dd-openfeature-provider-swift/pull/21)
