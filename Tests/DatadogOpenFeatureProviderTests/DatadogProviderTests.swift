@@ -105,14 +105,11 @@ internal struct ProviderMetadataTests {
 
     @Test("Provider with default constructor")
     func providerWithDefaultConstructor() async throws {
-        // Test the public constructor with default parameters
-        // In test environment without proper initialization, this returns NOPFlagsClient
         let provider = DatadogProvider()
         #expect(provider.metadata.name == "datadog")
 
-        // Verify it handles flag evaluation gracefully with NOPFlagsClient
         let result = try provider.getBooleanEvaluation(key: "test-flag", defaultValue: false, context: nil)
-        #expect(result.value == false) // default value
+        #expect(result.value == false)
     }
 
     @Test("Empty metadata in evaluation results")
@@ -121,8 +118,6 @@ internal struct ProviderMetadataTests {
         mockFlagsClient.setupFlag(key: "test-flag", value: AnyValue.bool(true), variant: "on", reason: "targeting_match")
 
         let provider = DatadogProvider(flagsClient: mockFlagsClient)
-
-        // Create context with targeting key and attributes
         let context = MutableContext(
             targetingKey: "user456",
             structure: MutableStructure(attributes: [
@@ -133,12 +128,9 @@ internal struct ProviderMetadataTests {
 
         let result = try provider.getBooleanEvaluation(key: "test-flag", defaultValue: false, context: context)
 
-        // Verify basic flag evaluation
         #expect(result.value == true)
         #expect(result.variant == "on")
         #expect(result.reason == "targeting_match")
-
-        // Verify metadata is empty as expected
         #expect(result.flagMetadata.isEmpty)
     }
 }
@@ -164,5 +156,247 @@ internal struct ContextManagementTests {
         // Then
         #expect(mockFlagsClient.lastSetContext != nil)
         #expect(mockFlagsClient.lastSetContext?.targetingKey == "user123")
+    }
+
+    @Test("Initialize does not throw when state is stale")
+    func initializeDoesNotThrowWhenStale() async throws {
+        // Given
+        let mockFlagsClient = DatadogFlagsClientMock()
+        mockFlagsClient.setEvaluationContextResult = .failure(.networkError(URLError(.notConnectedToInternet)))
+        mockFlagsClient.mockStateManager.simulateStateChange(.stale)
+        let provider = DatadogProvider(flagsClient: mockFlagsClient)
+        let context = MutableContext(targetingKey: "user123")
+
+        // When/Then
+        try await provider.initialize(initialContext: context)
+    }
+
+    @Test("Initialize throws when state is error")
+    func initializeThrowsWhenError() async throws {
+        // Given
+        let mockFlagsClient = DatadogFlagsClientMock()
+        mockFlagsClient.setEvaluationContextResult = .failure(.networkError(URLError(.notConnectedToInternet)))
+        mockFlagsClient.mockStateManager.simulateStateChange(.error)
+        let provider = DatadogProvider(flagsClient: mockFlagsClient)
+        let context = MutableContext(targetingKey: "user123")
+
+        // When/Then
+        await #expect(throws: FlagsError.self) {
+            try await provider.initialize(initialContext: context)
+        }
+    }
+
+    @Test("onContextSet does not throw when state is stale")
+    func onContextSetDoesNotThrowWhenStale() async throws {
+        // Given
+        let mockFlagsClient = DatadogFlagsClientMock()
+        mockFlagsClient.setEvaluationContextResult = .failure(.networkError(URLError(.timedOut)))
+        mockFlagsClient.mockStateManager.simulateStateChange(.stale)
+        let provider = DatadogProvider(flagsClient: mockFlagsClient)
+        let oldContext = MutableContext(targetingKey: "user123")
+        let newContext = MutableContext(targetingKey: "user456")
+
+        // When/Then
+        try await provider.onContextSet(oldContext: oldContext, newContext: newContext)
+    }
+
+    @Test("onContextSet throws when state is error")
+    func onContextSetThrowsWhenError() async throws {
+        // Given
+        let mockFlagsClient = DatadogFlagsClientMock()
+        mockFlagsClient.setEvaluationContextResult = .failure(.networkError(URLError(.notConnectedToInternet)))
+        mockFlagsClient.mockStateManager.simulateStateChange(.error)
+        let provider = DatadogProvider(flagsClient: mockFlagsClient)
+        let oldContext = MutableContext(targetingKey: "user123")
+        let newContext = MutableContext(targetingKey: "user456")
+
+        // When/Then
+        await #expect(throws: FlagsError.self) {
+            try await provider.onContextSet(oldContext: oldContext, newContext: newContext)
+        }
+    }
+}
+
+@Suite("DatadogProvider State Events")
+internal struct StateEventTests {
+    @Test("observe() emits .ready when state transitions to ready")
+    func observeEmitsReady() async throws {
+        // Given
+        let mockFlagsClient = DatadogFlagsClientMock()
+        let provider = DatadogProvider(flagsClient: mockFlagsClient)
+        var receivedEvents: [ProviderEvent] = []
+        let cancellable = provider.observe().sink { event in
+            if let event { receivedEvents.append(event) }
+        }
+
+        // When
+        mockFlagsClient.mockStateManager.simulateStateChange(.ready)
+
+        // Then
+        #expect(receivedEvents.contains(.ready))
+        _ = cancellable
+    }
+
+    @Test("observe() emits .stale when state transitions to stale")
+    func observeEmitsStale() async throws {
+        // Given
+        let mockFlagsClient = DatadogFlagsClientMock()
+        let provider = DatadogProvider(flagsClient: mockFlagsClient)
+        var receivedEvents: [ProviderEvent] = []
+        let cancellable = provider.observe().sink { event in
+            if let event { receivedEvents.append(event) }
+        }
+
+        // When
+        mockFlagsClient.mockStateManager.simulateStateChange(.stale)
+
+        // Then
+        #expect(receivedEvents.contains(.stale))
+        _ = cancellable
+    }
+
+    @Test("observe() emits .error when state transitions to error")
+    func observeEmitsError() async throws {
+        // Given
+        let mockFlagsClient = DatadogFlagsClientMock()
+        let provider = DatadogProvider(flagsClient: mockFlagsClient)
+        var receivedEvents: [ProviderEvent] = []
+        let cancellable = provider.observe().sink { event in
+            if let event { receivedEvents.append(event) }
+        }
+
+        // When
+        mockFlagsClient.mockStateManager.simulateStateChange(.error)
+
+        // Then
+        #expect(receivedEvents.contains(where: {
+            if case .error = $0 {
+                return true
+            } else {
+                return false
+            }
+        }))
+        _ = cancellable
+    }
+
+    @Test("observe() filters notReady and reconciling states")
+    func observeFiltersNotReadyAndReconciling() async throws {
+        // Given
+        let mockFlagsClient = DatadogFlagsClientMock()
+        let provider = DatadogProvider(flagsClient: mockFlagsClient)
+        var receivedEvents: [ProviderEvent] = []
+        let cancellable = provider.observe().sink { event in
+            if let event { receivedEvents.append(event) }
+        }
+
+        // When
+        mockFlagsClient.mockStateManager.simulateStateChange(.notReady)
+        mockFlagsClient.mockStateManager.simulateStateChange(.reconciling)
+
+        // Then
+        #expect(receivedEvents.isEmpty)
+        _ = cancellable
+    }
+
+    @Test("observe() does not replay the nil seed for a filtered initial state")
+    func observeSuppressesInitialNilForFilteredState() async throws {
+        // Given a client whose current state maps to no event at subscription time
+        let mockFlagsClient = DatadogFlagsClientMock()
+        mockFlagsClient.mockStateManager.simulateStateChange(.notReady)
+        let provider = DatadogProvider(flagsClient: mockFlagsClient)
+
+        // When — capture the raw optional stream (unlike other tests, do NOT discard nil)
+        var receivedEvents: [ProviderEvent?] = []
+        let cancellable = provider.observe().sink { event in
+            receivedEvents.append(event)
+        }
+
+        // Then — the seeded nil is not replayed for a filtered initial state
+        #expect(receivedEvents.isEmpty)
+
+        // And a subsequent real transition still flows through the filter
+        mockFlagsClient.mockStateManager.simulateStateChange(.ready)
+        #expect(receivedEvents == [.ready])
+        _ = cancellable
+    }
+
+    @Test("observe() emits full state transition sequence")
+    func observeEmitsFullSequence() async throws {
+        // Given
+        let mockFlagsClient = DatadogFlagsClientMock()
+        let provider = DatadogProvider(flagsClient: mockFlagsClient)
+        var receivedEvents: [ProviderEvent] = []
+        let cancellable = provider.observe().sink { event in
+            if let event { receivedEvents.append(event) }
+        }
+
+        // When
+        mockFlagsClient.mockStateManager.simulateStateChange(.reconciling)
+        mockFlagsClient.mockStateManager.simulateStateChange(.ready)
+        mockFlagsClient.mockStateManager.simulateStateChange(.reconciling)
+        mockFlagsClient.mockStateManager.simulateStateChange(.stale)
+
+        // Then
+        #expect(receivedEvents.count == 2)
+        #expect(receivedEvents[0] == .ready)
+        #expect(receivedEvents[1] == .stale)
+        _ = cancellable
+    }
+
+    @Test("observe() supports multiple concurrent observers")
+    func observeSupportsMultipleObservers() async throws {
+        // Given
+        let mockFlagsClient = DatadogFlagsClientMock()
+        let provider = DatadogProvider(flagsClient: mockFlagsClient)
+        var events1: [ProviderEvent] = []
+        var events2: [ProviderEvent] = []
+        let cancellable1 = provider.observe().sink { event in
+            if let event { events1.append(event) }
+        }
+        let cancellable2 = provider.observe().sink { event in
+            if let event { events2.append(event) }
+        }
+
+        // When
+        mockFlagsClient.mockStateManager.simulateStateChange(.ready)
+
+        // Then
+        #expect(events1.contains(.ready))
+        #expect(events2.contains(.ready))
+        _ = cancellable1
+        _ = cancellable2
+    }
+
+    @Test("observe() receives initial state on subscription")
+    func observeReceivesInitialState() async throws {
+        // Given
+        let mockFlagsClient = DatadogFlagsClientMock()
+        mockFlagsClient.mockStateManager.simulateStateChange(.ready)
+        let provider = DatadogProvider(flagsClient: mockFlagsClient)
+        var receivedEvents: [ProviderEvent] = []
+
+        // When
+        let cancellable = provider.observe().sink { event in
+            if let event { receivedEvents.append(event) }
+        }
+
+        // Then
+        #expect(receivedEvents == [.ready])
+        _ = cancellable
+    }
+
+    @Test("observe() removes listener on cancellation")
+    func observeRemovesListenerOnCancel() async throws {
+        // Given
+        let mockFlagsClient = DatadogFlagsClientMock()
+        let provider = DatadogProvider(flagsClient: mockFlagsClient)
+
+        // When: subscribing registers exactly one listener
+        let cancellable = provider.observe().sink { _ in }
+        #expect(mockFlagsClient.mockStateManager.listenerCount == 1)
+
+        // Then: cancelling removes it via handleEvents(receiveCancel:)
+        cancellable.cancel()
+        #expect(mockFlagsClient.mockStateManager.listenerCount == 0)
     }
 }
