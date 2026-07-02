@@ -15,7 +15,7 @@ extension ProviderEvaluation where T == Bool {
     init(_ details: FlagDetails<Bool>) {
         self.init(
             value: details.value,
-            flagMetadata: [:],
+            flagMetadata: details.allocationKey.map { ["allocationKey": FlagMetadataValue.string($0)] } ?? [:],
             variant: details.variant,
             reason: details.reason
         )
@@ -27,7 +27,7 @@ extension ProviderEvaluation where T == String {
     init(_ details: FlagDetails<String>) {
         self.init(
             value: details.value,
-            flagMetadata: [:],
+            flagMetadata: details.allocationKey.map { ["allocationKey": FlagMetadataValue.string($0)] } ?? [:],
             variant: details.variant,
             reason: details.reason
         )
@@ -39,7 +39,7 @@ extension ProviderEvaluation where T == Double {
     init(_ details: FlagDetails<Double>) {
         self.init(
             value: details.value,
-            flagMetadata: [:],
+            flagMetadata: details.allocationKey.map { ["allocationKey": FlagMetadataValue.string($0)] } ?? [:],
             variant: details.variant,
             reason: details.reason
         )
@@ -52,7 +52,7 @@ extension ProviderEvaluation where T == Int64 {
     init(_ details: FlagDetails<Int>) {
         self.init(
             value: Int64(details.value),
-            flagMetadata: [:],
+            flagMetadata: details.allocationKey.map { ["allocationKey": FlagMetadataValue.string($0)] } ?? [:],
             variant: details.variant,
             reason: details.reason
         )
@@ -65,7 +65,7 @@ extension ProviderEvaluation where T == Value {
     init(_ details: FlagDetails<AnyValue>) {
         self.init(
             value: Value(details.value),
-            flagMetadata: [:],
+            flagMetadata: details.allocationKey.map { ["allocationKey": FlagMetadataValue.string($0)] } ?? [:],
             variant: details.variant,
             reason: details.reason
         )

@@ -1,5 +1,7 @@
 # Unreleased
 
+- [FIXED] Thread flag metadata (`allocationKey`) into OpenFeature `flagMetadata` instead of always returning empty. See [#23](https://github.com/DataDog/dd-openfeature-provider-swift/pull/23)
+
 # 0.1.0 / 2026-01-14
 
 Initial release of Datadog's Provider for the OpenFeature iOS SDK.
