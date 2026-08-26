@@ -34,6 +34,7 @@ license-check:
 platform-compatibility:
 	@$(ECHO_TITLE) "make platform-compatibility"
 	swift package resolve
+	git diff --exit-code HEAD -- Package.resolved
 	python3 ./tools/validate-platform-compatibility.py
 
 release-tools-test:
