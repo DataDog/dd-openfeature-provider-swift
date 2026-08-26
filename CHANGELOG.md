@@ -1,3 +1,7 @@
+# Unreleased
+
+- [CHANGED] Automate release PR preparation, tagging, package publication, GitHub Release creation, and back-merge setup.
+
 # 0.2.0 / 2026-07-02
 
 - [FEATURE] Implement `observe()` and STALE state support. See [#21](https://github.com/DataDog/dd-openfeature-provider-swift/pull/21)
