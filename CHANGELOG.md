@@ -1,4 +1,4 @@
-# Unreleased
+# 0.2.1 / 2026-08-26
 
 - [FIXED] Require OpenFeature Swift SDK 0.3.1 for Swift Package Manager so the advertised watchOS and tvOS platforms use the first upstream release that supports them.
 - [FIXED] Align the shared Xcode configuration with the watchOS 8 deployment target declared by the package.
