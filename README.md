@@ -23,6 +23,21 @@ CocoaPods continues to use OpenFeature 0.3.0 because it is the latest version pu
 
 For installation instructions, see **[INSTALLATION.md](INSTALLATION.md)**.
 
+## Platform Compatibility Validation
+
+Platform support is enforced by a required CI contract in addition to platform builds. Run the same validation locally after changing a dependency or deployment target:
+
+```bash
+make platform-compatibility
+```
+
+The check verifies that:
+
+- `Package.swift` deployment floors match `xcconfigs/Base.xcconfig`.
+- The OpenFeature minimum accepted by Swift Package Manager matches the version pinned and tested in `Package.resolved`.
+- Resolved dependency checkouts match their locked revisions.
+- OpenFeature and `dd-sdk-ios` explicitly support every advertised iOS, macOS, watchOS, and tvOS target without requiring a higher deployment version.
+
 ## Development
 
 See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed development setup, testing, and contribution guidelines.
