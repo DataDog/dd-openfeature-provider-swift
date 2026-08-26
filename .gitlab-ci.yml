@@ -40,6 +40,7 @@ default:
           - "Tests/**/*"
           - "SmokeTests/**/*"
           - "tools/**/*"
+          - "xcconfigs/**/*"
           - "*" # match any file in the root directory
 
 .release-pipeline-job:
@@ -86,6 +87,16 @@ Unit Tests:
     - make clean repo-setup ENV=ci
     - make test
 
+Platform Compatibility:
+  stage: test
+  rules:
+    - !reference [.test-pipeline-job, rules]
+    - !reference [.release-pipeline-job, rules]
+  script:
+    - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE"
+    - make clean repo-setup ENV=ci
+    - make platform-compatibility
+
 # ┌──────────────────────────┐
 # │ Platform Build Testing:  │
 # └──────────────────────────┘
@@ -122,8 +133,9 @@ Platform Tests (tvOS):
     PLATFORM: "tvOS Simulator"
     DEVICE: "Apple TV"
   script:
-    - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE"
+    - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE" --tvOS
     - make clean repo-setup ENV=ci
+    - xcodebuild -scheme DatadogOpenFeatureProvider -destination "generic/platform=tvOS" build
     - xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=$PLATFORM,name=$DEVICE,OS=$DEFAULT_TVOS_OS" build test
 
 Platform Tests (watchOS):
@@ -131,14 +143,10 @@ Platform Tests (watchOS):
   rules: 
     - !reference [.test-pipeline-job, rules]
     - !reference [.release-pipeline-job, rules]
-  variables:
-    PLATFORM: "watchOS Simulator"  
-    DEVICE: "Apple Watch Series 10 (46mm)"
   script:
-    - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE"
+    - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE" --watchOS
     - make clean repo-setup ENV=ci
-    - xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=$PLATFORM,name=$DEVICE,OS=latest" build
-  allow_failure: true # watchOS tests can be flaky
+    - xcodebuild -scheme DatadogOpenFeatureProvider -destination "generic/platform=watchOS" build
 
 # ┌────────────────────┐
 # │ Smoke Test stage:  │

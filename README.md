@@ -8,18 +8,37 @@ This package provides a bridge between [OpenFeature](https://openfeature.dev/) a
 
 - **Xcode 15.0+**
 - **Swift 5.9+**
-- **iOS 14.0+ / macOS 12.6+ / watchOS 7.0+ / tvOS 14.0+**
+- **iOS 14.0+ / macOS 12.6+ / watchOS 8.0+ / tvOS 14.0+**
 
 ### OpenFeature SDK Version
 
-This provider uses OpenFeature Swift SDK 0.3.0, although there are [newer versions](https://github.com/open-feature/swift-sdk/releases), to match the latest version published on CocoaPods. E.g. this means using `MutableContext` instead of the newer `ImmutableContext`.
+Swift Package Manager uses OpenFeature Swift SDK 0.3.1, the first release with watchOS and tvOS support. OpenFeature 0.4 and later require compatibility changes that will be handled separately.
+
+CocoaPods continues to use OpenFeature 0.3.0 because it is the latest version published to CocoaPods. As a result, CocoaPods installation remains iOS-only.
 
 ## Installation
 
-- **Swift Package Manager**: iOS 14+, macOS 12.6+, watchOS 7+, and tvOS 14+
-- **CocoaPods**: iOS 14+ only (macOS, tvOS, and watchOS not supported due to OpenFeature 0.3.0 and DatadogFlags CocoaPods dependency limitations)
+- **Swift Package Manager**: iOS 14+, macOS 12.6+, watchOS 8+, and tvOS 14+
+- **CocoaPods**: iOS 14+ only (the published OpenFeature 0.3.0 pod does not support tvOS or watchOS)
 
 For installation instructions, see **[INSTALLATION.md](INSTALLATION.md)**.
+
+## Platform Compatibility Validation
+
+Platform support is enforced by a required CI contract in addition to platform builds. Run the same validation locally after changing a dependency or deployment target:
+
+```bash
+make platform-compatibility
+```
+
+The check verifies that:
+
+- `Package.swift` deployment floors match `xcconfigs/Base.xcconfig`.
+- The OpenFeature minimum accepted by Swift Package Manager matches the version pinned and tested in `Package.resolved`.
+- Resolved dependency checkouts match their locked revisions.
+- OpenFeature and `dd-sdk-ios` explicitly support every advertised iOS, macOS, watchOS, and tvOS target without requiring a higher deployment version.
+
+CI also requires generic watchOS and tvOS device builds. The tvOS job additionally runs the package test suite on an Apple TV simulator.
 
 ## Development
 
