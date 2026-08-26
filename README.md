@@ -44,8 +44,6 @@ CI also requires generic watchOS and tvOS device builds. The tvOS job additional
 
 See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed development setup, testing, and contribution guidelines.
 
-Releases are prepared with one workflow dispatch and published automatically after the generated release PR is merged. See [RELEASING.md](RELEASING.md).
-
 ## Usage
 
 ### Quick Start

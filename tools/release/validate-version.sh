@@ -20,6 +20,33 @@ check_for_help "$@"
 parse_args "$@"
 
 REPO_PATH="$artifacts_path/dd-openfeature-provider-swift"
-SCRIPT_DIRECTORY="${0:A:h}"
+SDK_VERSION_FILE="$REPO_PATH/Sources/DatadogOpenFeatureProvider/Versioning.swift"
 
-python3 "$SCRIPT_DIRECTORY/release_version.py" validate --version "$tag" --root "$REPO_PATH"
+check_sdk_version () {
+    echo_subtitle "Check 'sdk_version'"
+    sdk_version=$(grep '__sdkVersion' $SDK_VERSION_FILE | awk -F '"' '{print $2}')
+    if [[ "$sdk_version" == "$tag" ]]; then
+        echo_succ "▸ SDK version in '$SDK_VERSION_FILE' ('$sdk_version') matches the tag '$tag'"
+    else
+        echo_err "▸ Error:" "SDK version in '$SDK_VERSION_FILE' ('$sdk_version') does not match tag '$tag'"
+        exit 1
+    fi
+}
+
+check_podspec_versions () {
+    echo_subtitle "Check podspec versions in '$REPO_PATH/*.podspec'"
+    for podspec_file in $(find $REPO_PATH -type f -name "*.podspec" -maxdepth 1); do
+        spec_name=$(basename "$podspec_file")
+        spec_version=$(grep -E '^\s*s\.version\s*=' $podspec_file | awk -F '"' '{print $2}')
+      
+        if [[ "$spec_version" == "$tag" ]]; then
+            echo_succ "▸ '$spec_name' version ('$spec_version') matches the tag '$tag'"
+        else
+            echo_err "▸ Error:" "'$spec_name' version ('$spec_version') does not match tag '$tag'"
+            exit 1
+        fi
+    done
+}
+
+check_sdk_version
+check_podspec_versions

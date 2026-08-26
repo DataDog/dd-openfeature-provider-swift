@@ -4,7 +4,6 @@
 - [FIXED] Align the shared Xcode configuration with the watchOS 8 deployment target declared by the package.
 - [CHANGED] Raise the minimum supported watchOS version from 7 to 8.
 - [CHANGED] Make generic watchOS and tvOS device builds and cross-package platform compatibility validation required CI checks.
-- [CHANGED] Automate release PR preparation, tagging, package publication, GitHub Release creation, and back-merge setup.
 
 # 0.2.0 / 2026-07-02
 

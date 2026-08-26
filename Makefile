@@ -1,7 +1,6 @@
 all: env-check repo-setup templates
-.PHONY: env-check lint license-check platform-compatibility release-tools-test templates clean test spm-build \
-		set-ci-secret help smoke-test smoke-test-ios smoke-test-ios-all release-publish-podspecs \
-		release-publish-github bump
+.PHONY: env-check lint license-check platform-compatibility templates clean test spm-build set-ci-secret help \
+		smoke-test smoke-test-ios smoke-test-ios-all release-publish-podspecs bump
 
 REPO_ROOT := $(PWD)
 include tools/utils/common.mk
@@ -36,10 +35,6 @@ platform-compatibility:
 	swift package resolve
 	git diff --exit-code HEAD -- Package.resolved
 	python3 ./tools/validate-platform-compatibility.py
-
-release-tools-test:
-	@$(ECHO_TITLE) "make release-tools-test"
-	PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tools/release/tests -p 'test_*.py'
 
 templates:
 	@$(ECHO_TITLE) "make templates"
@@ -97,15 +92,13 @@ release-publish-podspecs:
 		--artifacts-path "$(ARTIFACTS_PATH)" \
 		--podspec-name "DatadogOpenFeatureProvider.podspec"
 
-release-publish-github:
-	@$(call require_param,GIT_TAG)
-	@:$(eval DRY_RUN ?= 1)
-	@$(ECHO_TITLE) "make release-publish-github GIT_TAG='$(GIT_TAG)' DRY_RUN='$(DRY_RUN)'"
-	DRY_RUN=$(DRY_RUN) zsh ./tools/release/publish-github.sh --tag "$(GIT_TAG)"
-
 bump:
-	@$(call require_param,VERSION)
-	python3 ./tools/release/release_version.py prepare --version "$(VERSION)"
+	@read -p "Enter version number: " version;  \
+	echo "// GENERATED FILE: Do not edit directly\n\ninternal let __sdkVersion = \"$$version\"" > Sources/DatadogOpenFeatureProvider/Versioning.swift; \
+	./tools/podspec_bump_version.sh $$version; \
+	git add . ; \
+	git commit -m "Bumped version to $$version"; \
+	echo Bumped version to $$version
 
 help:
 	@echo "Available targets:"
@@ -114,7 +107,6 @@ help:
 	@echo "  lint             - Run SwiftLint on source and test files"
 	@echo "  license-check    - Check license headers in source files"
 	@echo "  platform-compatibility - Validate package, xcconfig, lockfile, and dependency platform floors"
-	@echo "  release-tools-test - Test release version preparation and validation"
 	@echo "  templates        - Install Xcode file templates"
 	@echo "  test             - Run Swift tests"
 	@echo "  spm-build        - Build with Swift Package Manager"
@@ -124,6 +116,5 @@ help:
 	@echo "  smoke-test-ios   - Run smoke tests for specified directory using iOS Simulator"
 	@echo "  smoke-test-ios-all - Run all smoke tests (SPM + CocoaPods) using iOS Simulator"
 	@echo "  release-publish-podspecs - Publish podspecs to CocoaPods trunk"
-	@echo "  release-publish-github - Publish the GitHub Release for a validated tag"
-	@echo "  bump             - Update release version files and CHANGELOG (VERSION required)"
+	@echo "  bump             - Bump version and create commit"
 	@echo "  help             - Show this help message"
