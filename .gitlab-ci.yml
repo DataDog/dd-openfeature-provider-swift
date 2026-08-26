@@ -193,7 +193,7 @@ Release Candidate:
     - export GIT_TAG="${CI_COMMIT_BRANCH#release/}"
     - mkdir -p "$ARTIFACTS_PATH"
     - git clone --branch "$CI_COMMIT_BRANCH" . "$ARTIFACTS_PATH/dd-openfeature-provider-swift"
-    - ./tools/release/validate-version.sh --tag "$GIT_TAG" --artifacts-path "$ARTIFACTS_PATH"
+    - zsh ./tools/release/validate-version.sh --tag "$GIT_TAG" --artifacts-path "$ARTIFACTS_PATH"
     - make release-publish-podspecs
 
 # ┌──────────────┐
@@ -220,7 +220,7 @@ Publish CP podspecs:
     - make clean
     - mkdir -p "$ARTIFACTS_PATH"
     - git clone --branch "$GIT_TAG" . "$ARTIFACTS_PATH/dd-openfeature-provider-swift"
-    - ./tools/release/validate-version.sh --tag "$GIT_TAG" --artifacts-path "$ARTIFACTS_PATH"
+    - zsh ./tools/release/validate-version.sh --tag "$GIT_TAG" --artifacts-path "$ARTIFACTS_PATH"
     - make release-publish-podspecs
 
 Publish GitHub release:

@@ -100,7 +100,7 @@ release-publish-github:
 	@$(call require_param,GIT_TAG)
 	@:$(eval DRY_RUN ?= 1)
 	@$(ECHO_TITLE) "make release-publish-github GIT_TAG='$(GIT_TAG)' DRY_RUN='$(DRY_RUN)'"
-	DRY_RUN=$(DRY_RUN) ./tools/release/publish-github.sh --tag "$(GIT_TAG)"
+	DRY_RUN=$(DRY_RUN) zsh ./tools/release/publish-github.sh --tag "$(GIT_TAG)"
 
 bump:
 	@$(call require_param,VERSION)
