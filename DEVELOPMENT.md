@@ -94,15 +94,15 @@ make env-check
 
 The project uses Swift Package Manager with the following dependency strategy:
 
-- **OpenFeature Swift SDK**: Pinned to exact version (see Package.swift)
+- **OpenFeature Swift SDK**: Constrained to the supported 0.3.x API and pinned in `Package.resolved`
 - **Datadog SDK**: Flexible range from minimum supported version (see Package.swift)
 
 ### Updating Dependencies
 
 1. **For OpenFeature SDK** (breaking changes possible):
    ```bash
-   # Update Package.swift exact version
-   # Test thoroughly with: make test
+   # Update the Package.swift version range and Package.resolved pin
+   # Test thoroughly with: make platform-compatibility test
    # Update DEVELOPMENT.md requirements
    ```
 

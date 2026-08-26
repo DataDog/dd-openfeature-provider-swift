@@ -1,3 +1,10 @@
+# Unreleased
+
+- [FIXED] Require OpenFeature Swift SDK 0.3.1 for Swift Package Manager so the advertised watchOS and tvOS platforms use the first upstream release that supports them.
+- [FIXED] Align the shared Xcode configuration with the watchOS 8 deployment target declared by the package.
+- [CHANGED] Raise the minimum supported watchOS version from 7 to 8.
+- [CHANGED] Make the watchOS package build and cross-package platform compatibility validation required CI checks.
+
 # 0.2.0 / 2026-07-02
 
 - [FEATURE] Implement `observe()` and STALE state support. See [#21](https://github.com/DataDog/dd-openfeature-provider-swift/pull/21)

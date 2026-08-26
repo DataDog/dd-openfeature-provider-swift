@@ -1,5 +1,5 @@
 all: env-check repo-setup templates
-.PHONY: env-check lint license-check templates clean test spm-build set-ci-secret help \
+.PHONY: env-check lint license-check platform-compatibility templates clean test spm-build set-ci-secret help \
 		smoke-test smoke-test-ios smoke-test-ios-all release-publish-podspecs bump
 
 REPO_ROOT := $(PWD)
@@ -29,6 +29,11 @@ lint:
 license-check:
 	@$(ECHO_TITLE) "make license-check"
 	./tools/license/check-license.sh
+
+platform-compatibility:
+	@$(ECHO_TITLE) "make platform-compatibility"
+	swift package resolve
+	python3 ./tools/validate-platform-compatibility.py
 
 templates:
 	@$(ECHO_TITLE) "make templates"
@@ -100,6 +105,7 @@ help:
 	@echo "  repo-setup       - Set up repository with environment configurations"
 	@echo "  lint             - Run SwiftLint on source and test files"
 	@echo "  license-check    - Check license headers in source files"
+	@echo "  platform-compatibility - Validate package, xcconfig, lockfile, and dependency platform floors"
 	@echo "  templates        - Install Xcode file templates"
 	@echo "  test             - Run Swift tests"
 	@echo "  spm-build        - Build with Swift Package Manager"
