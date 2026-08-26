@@ -1,0 +1,91 @@
+name: Tag Release
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  tag:
+    name: Validate and create release tag
+    if: >
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.base.ref == 'main' &&
+      startsWith(github.event.pull_request.head.ref, 'release/') &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: DataDog/dd-octo-sts-action@96a25462dbcb10ebf0bfd6e2ccc917d2ab235b9a # v1.0.4
+        id: octo-sts
+        with:
+          scope: datadog/dd-openfeature-provider-swift
+          policy: release-tag
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate merged release
+        env:
+          VERSION: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -euo pipefail
+          VERSION="${VERSION#release/}"
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid version '$VERSION' derived from the release branch."
+            exit 1
+          fi
+          python3 tools/release/release_version.py validate --version "$VERSION"
+          make release-tools-test
+
+      - name: Create immutable release tag
+        env:
+          GH_TOKEN: ${{ steps.octo-sts.outputs.token }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+        run: |
+          set -euo pipefail
+          VERSION="${HEAD_REF#release/}"
+          if gh api "repos/${GITHUB_REPOSITORY}/git/refs/tags/${VERSION}" >/dev/null 2>&1; then
+            echo "::error::Tag '${VERSION}' already exists; refusing to move it."
+            exit 1
+          fi
+          gh api "repos/${GITHUB_REPOSITORY}/git/refs" \
+            -f ref="refs/tags/${VERSION}" \
+            -f sha="$MERGE_SHA"
+
+      - name: Open draft back-merge PR
+        env:
+          GH_TOKEN: ${{ steps.octo-sts.outputs.token }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          RELEASE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          RELEASE_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          set -euo pipefail
+          VERSION="${HEAD_REF#release/}"
+          TICKET=$(printf '%s' "$RELEASE_TITLE" | sed -n 's/^\[\([A-Z][A-Z0-9]*-[0-9][0-9]*\)\].*/\1/p')
+          if [[ -z "$TICKET" ]]; then
+            echo "::error::Could not derive a ticket from release PR title '$RELEASE_TITLE'."
+            exit 1
+          fi
+          BACKMERGE_BRANCH="backmerge/${VERSION}"
+          if ! gh api "repos/${GITHUB_REPOSITORY}/git/refs/heads/${BACKMERGE_BRANCH}" >/dev/null 2>&1; then
+            gh api "repos/${GITHUB_REPOSITORY}/git/refs" \
+              -f ref="refs/heads/${BACKMERGE_BRANCH}" \
+              -f sha="$RELEASE_HEAD_SHA"
+          fi
+          if [[ -z "$(gh pr list --repo "$GITHUB_REPOSITORY" --base develop --head "$BACKMERGE_BRANCH" --state all --json url --jq '.[0].url')" ]]; then
+            BODY=$(printf "## Motivation\n\nReturn the already-reviewed %s release metadata to develop.\n\n## Changes\n\nBack-merge the automated version and changelog commit from the release branch.\n\n## Decisions\n\nThis PR is created as a draft and does not block tag publication." "$VERSION")
+            gh pr create \
+              --repo "$GITHUB_REPOSITORY" \
+              --draft \
+              --base develop \
+              --head "$BACKMERGE_BRANCH" \
+              --title "[$TICKET] Back-merge $VERSION release to develop" \
+              --body "$BODY"
+          fi
