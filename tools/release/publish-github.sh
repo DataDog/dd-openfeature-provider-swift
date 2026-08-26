@@ -41,9 +41,9 @@ if [[ "$DRY_RUN" == "1" || "$DRY_RUN" == "true" ]]; then
     exit 0
 fi
 
-export GITHUB_TOKEN=$(dd-octo-sts --disable-tracing token \
+export GITHUB_TOKEN="$(dd-octo-sts --disable-tracing token \
     --scope "$REPO_NAME" \
-    --policy self.gitlab.release.create-release)
+    --policy self.gitlab.release.create-release)"
 TOKEN_ACQUIRED="true"
 
 if gh release view "$tag" --repo "$REPO_NAME" >/dev/null 2>&1; then
