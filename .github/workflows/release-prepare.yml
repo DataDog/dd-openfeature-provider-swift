@@ -1,0 +1,173 @@
+name: Prepare Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Version bump type
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        default: patch
+        required: true
+      ticket:
+        description: Linear ticket for the release commit and PR
+        type: string
+        required: true
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  release:
+    name: Open signed release PR
+    runs-on: ubuntu-latest
+    steps:
+      - uses: DataDog/dd-octo-sts-action@96a25462dbcb10ebf0bfd6e2ccc917d2ab235b9a # v1.0.4
+        id: octo-sts
+        with:
+          scope: datadog/dd-openfeature-provider-swift
+          policy: release
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: develop
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Compute next version
+        id: version
+        env:
+          BUMP: ${{ inputs.bump }}
+        run: |
+          set -euo pipefail
+          CURRENT_VERSION=""
+          while IFS= read -r CANDIDATE; do
+            if [[ "$CANDIDATE" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              CURRENT_VERSION="$CANDIDATE"
+              break
+            fi
+          done < <(git tag --list --sort=-version:refname)
+          if [[ ! "$CURRENT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::No MAJOR.MINOR.PATCH release tag was found."
+            exit 1
+          fi
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+          case "$BUMP" in
+            major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+            minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+            patch) PATCH=$((PATCH + 1)) ;;
+          esac
+          VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          {
+            echo "current-version=${CURRENT_VERSION}"
+            echo "version=${VERSION}"
+            echo "branch=release/${VERSION}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Validate inputs and remote state
+        env:
+          GH_TOKEN: ${{ steps.octo-sts.outputs.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+          BRANCH: ${{ steps.version.outputs.branch }}
+          TICKET: ${{ inputs.ticket }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$TICKET" =~ ^[A-Z][A-Z0-9]+-[0-9]+$ ]]; then
+            echo "::error::Ticket '$TICKET' is not a valid ticket key."
+            exit 1
+          fi
+          if gh api "repos/${GITHUB_REPOSITORY}/git/refs/tags/${VERSION}" >/dev/null 2>&1; then
+            echo "::error::Tag '${VERSION}' already exists."
+            exit 1
+          fi
+          if gh api "repos/${GITHUB_REPOSITORY}/git/refs/heads/${BRANCH}" >/dev/null 2>&1; then
+            echo "::error::Branch '${BRANCH}' already exists."
+            exit 1
+          fi
+
+      - name: Prepare and test release files
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          python3 tools/release/release_version.py prepare --version "$VERSION"
+          make release-tools-test
+          python3 tools/release/release_version.py validate --version "$VERSION"
+
+      - name: Create release branch with a signed commit
+        id: commit
+        env:
+          GH_TOKEN: ${{ steps.octo-sts.outputs.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+          BRANCH: ${{ steps.version.outputs.branch }}
+          TICKET: ${{ inputs.ticket }}
+        run: |
+          set -euo pipefail
+          BASE_SHA=$(gh api "repos/${GITHUB_REPOSITORY}/git/refs/heads/develop" --jq .object.sha)
+          LOCAL_BASE_SHA=$(git rev-parse HEAD)
+          if [[ "$LOCAL_BASE_SHA" != "$BASE_SHA" ]]; then
+            echo "::error::develop advanced from ${LOCAL_BASE_SHA} to ${BASE_SHA}; rerun the workflow."
+            exit 1
+          fi
+          BASE_TREE=$(gh api "repos/${GITHUB_REPOSITORY}/git/commits/${BASE_SHA}" --jq .tree.sha)
+
+          SDK_BLOB=$(jq -n --rawfile content Sources/DatadogOpenFeatureProvider/Versioning.swift \
+            '{content: $content, encoding: "utf-8"}' \
+            | gh api "repos/${GITHUB_REPOSITORY}/git/blobs" --input - --jq .sha)
+          PODSPEC_BLOB=$(jq -n --rawfile content DatadogOpenFeatureProvider.podspec \
+            '{content: $content, encoding: "utf-8"}' \
+            | gh api "repos/${GITHUB_REPOSITORY}/git/blobs" --input - --jq .sha)
+          CHANGELOG_BLOB=$(jq -n --rawfile content CHANGELOG.md \
+            '{content: $content, encoding: "utf-8"}' \
+            | gh api "repos/${GITHUB_REPOSITORY}/git/blobs" --input - --jq .sha)
+
+          TREE_SHA=$(jq -n \
+            --arg base "$BASE_TREE" \
+            --arg sdk "$SDK_BLOB" \
+            --arg podspec "$PODSPEC_BLOB" \
+            --arg changelog "$CHANGELOG_BLOB" \
+            '{
+              base_tree: $base,
+              tree: [
+                {path: "Sources/DatadogOpenFeatureProvider/Versioning.swift", mode: "100644", type: "blob", sha: $sdk},
+                {path: "DatadogOpenFeatureProvider.podspec", mode: "100644", type: "blob", sha: $podspec},
+                {path: "CHANGELOG.md", mode: "100644", type: "blob", sha: $changelog}
+              ]
+            }' | gh api "repos/${GITHUB_REPOSITORY}/git/trees" --input - --jq .sha)
+
+          MESSAGE=$(printf '[%s] Prepare %s release\n\nUpdate the SDK version, podspec, and changelog for the automated release.\n\nEnvironment: GitHub Actions' \
+            "$TICKET" "$VERSION")
+          COMMIT_SHA=$(jq -n \
+            --arg message "$MESSAGE" \
+            --arg tree "$TREE_SHA" \
+            --arg parent "$BASE_SHA" \
+            '{message: $message, tree: $tree, parents: [$parent]}' \
+            | gh api "repos/${GITHUB_REPOSITORY}/git/commits" --input - --jq .sha)
+
+          gh api "repos/${GITHUB_REPOSITORY}/git/refs" \
+            -f ref="refs/heads/${BRANCH}" \
+            -f sha="$COMMIT_SHA"
+          echo "commit-sha=${COMMIT_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Open draft release PR
+        env:
+          GH_TOKEN: ${{ steps.octo-sts.outputs.token }}
+          CURRENT_VERSION: ${{ steps.version.outputs.current-version }}
+          VERSION: ${{ steps.version.outputs.version }}
+          BRANCH: ${{ steps.version.outputs.branch }}
+          TICKET: ${{ inputs.ticket }}
+        run: |
+          set -euo pipefail
+          BODY=$(printf "## Motivation\n\nPublish provider %s from the changes accumulated on develop.\n\n## Changes\n\n- Bump the provider from %s to %s.\n- Move the Unreleased changelog entries into the %s release section.\n\n## Decisions\n\nMerging this PR automatically creates the %s tag. Tag CI validates and publishes SwiftPM, CocoaPods, and the GitHub Release, then opens a draft back-merge PR to develop.\n\nLinear: %s" \
+            "$VERSION" "$CURRENT_VERSION" "$VERSION" "$VERSION" "$VERSION" "$TICKET")
+          gh pr create \
+            --repo "$GITHUB_REPOSITORY" \
+            --draft \
+            --base main \
+            --head "$BRANCH" \
+            --title "[$TICKET] Release $VERSION" \
+            --body "$BODY"
