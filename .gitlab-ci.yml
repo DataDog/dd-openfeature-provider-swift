@@ -133,8 +133,9 @@ Platform Tests (tvOS):
     PLATFORM: "tvOS Simulator"
     DEVICE: "Apple TV"
   script:
-    - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE"
+    - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE" --tvOS
     - make clean repo-setup ENV=ci
+    - xcodebuild -scheme DatadogOpenFeatureProvider -destination "generic/platform=tvOS" build
     - xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=$PLATFORM,name=$DEVICE,OS=$DEFAULT_TVOS_OS" build test
 
 Platform Tests (watchOS):

@@ -65,8 +65,10 @@ xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=iOS Simulat
 ```bash
 # Test on different platforms (adjust device names/OS versions as available)
 xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=iOS Simulator,name=iPhone 16,OS=18.5" build
-xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=macOS,arch=arm64" build  
-xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=tvOS Simulator,name=Apple TV,OS=26.0" build
+xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=macOS,arch=arm64" build
+xcodebuild -scheme DatadogOpenFeatureProvider -destination "generic/platform=tvOS" build
+xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=tvOS Simulator,name=Apple TV,OS=latest" build test
+xcodebuild -scheme DatadogOpenFeatureProvider -destination "generic/platform=watchOS" build
 ```
 
 ## Code Quality

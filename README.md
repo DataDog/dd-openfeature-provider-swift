@@ -38,6 +38,8 @@ The check verifies that:
 - Resolved dependency checkouts match their locked revisions.
 - OpenFeature and `dd-sdk-ios` explicitly support every advertised iOS, macOS, watchOS, and tvOS target without requiring a higher deployment version.
 
+CI also requires generic watchOS and tvOS device builds. The tvOS job additionally runs the package test suite on an Apple TV simulator.
+
 ## Development
 
 See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed development setup, testing, and contribution guidelines.
