@@ -65,8 +65,10 @@ xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=iOS Simulat
 ```bash
 # Test on different platforms (adjust device names/OS versions as available)
 xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=iOS Simulator,name=iPhone 16,OS=18.5" build
-xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=macOS,arch=arm64" build  
-xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=tvOS Simulator,name=Apple TV,OS=26.0" build
+xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=macOS,arch=arm64" build
+xcodebuild -scheme DatadogOpenFeatureProvider -destination "generic/platform=tvOS" build
+xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=tvOS Simulator,name=Apple TV,OS=latest" build test
+xcodebuild -scheme DatadogOpenFeatureProvider -destination "generic/platform=watchOS" build
 ```
 
 ## Code Quality
@@ -94,15 +96,15 @@ make env-check
 
 The project uses Swift Package Manager with the following dependency strategy:
 
-- **OpenFeature Swift SDK**: Pinned to exact version (see Package.swift)
+- **OpenFeature Swift SDK**: Constrained to the supported 0.3.x API and pinned in `Package.resolved`
 - **Datadog SDK**: Flexible range from minimum supported version (see Package.swift)
 
 ### Updating Dependencies
 
 1. **For OpenFeature SDK** (breaking changes possible):
    ```bash
-   # Update Package.swift exact version
-   # Test thoroughly with: make test
+   # Update the Package.swift version range and Package.resolved pin
+   # Test thoroughly with: make platform-compatibility test
    # Update DEVELOPMENT.md requirements
    ```
 
