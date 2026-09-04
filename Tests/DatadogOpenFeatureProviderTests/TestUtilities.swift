@@ -22,6 +22,7 @@ internal class DatadogFlagsClientMock: FlagsClientProtocol {
     var lastSetContext: FlagsEvaluationContext?
     let mockStateManager = MockFlagsStateObservable()
     var setEvaluationContextResult: Result<Void, FlagsError> = .success(())
+    var setEvaluationContextStub: ((FlagsEvaluationContext, @escaping (Result<Void, FlagsError>) -> Void) -> Void)?
 
     var state: FlagsStateObservable { mockStateManager }
 
@@ -31,7 +32,11 @@ internal class DatadogFlagsClientMock: FlagsClientProtocol {
 
     func setEvaluationContext(_ context: FlagsEvaluationContext, completion: @escaping (Result<Void, FlagsError>) -> Void) {
         lastSetContext = context
-        completion(setEvaluationContextResult)
+        if let setEvaluationContextStub {
+            setEvaluationContextStub(context, completion)
+        } else {
+            completion(setEvaluationContextResult)
+        }
     }
 
     func getDetails<T>(key: String, defaultValue: T) -> FlagDetails<T> where T: Equatable, T: FlagValue {
