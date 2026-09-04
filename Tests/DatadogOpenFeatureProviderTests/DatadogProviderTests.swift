@@ -186,6 +186,59 @@ internal struct ContextManagementTests {
         }
     }
 
+    @Test("Initialization timeout emits error before late ready recovery")
+    func initializationTimeoutEmitsErrorBeforeLateReadyRecovery() async {
+        // Given
+        let mockFlagsClient = DatadogFlagsClientMock()
+        let provider = DatadogProvider(flagsClient: mockFlagsClient)
+        let context = MutableContext(targetingKey: "user123")
+        var lifecycle: [String] = []
+        let cancellable = provider.observe().sink { event in
+            switch event {
+            case .error:
+                lifecycle.append("provider-error")
+            case .ready:
+                lifecycle.append("provider-ready")
+            default:
+                break
+            }
+        }
+        mockFlagsClient.setEvaluationContextStub = { _, completion in
+            mockFlagsClient.mockStateManager.simulateStateChange(.error)
+            completion(.failure(.networkError(URLError(.timedOut))))
+        }
+
+        // When
+        await #expect(throws: FlagsError.self) {
+            try await provider.initialize(initialContext: context)
+        }
+        lifecycle.append("initialize-failed")
+        mockFlagsClient.mockStateManager.simulateStateChange(.ready)
+
+        // Then
+        #expect(lifecycle == ["provider-error", "initialize-failed", "provider-ready"])
+        _ = cancellable
+    }
+
+    @Test("setProviderAndWait settles in error on initialization timeout")
+    func setProviderAndWaitSettlesInErrorOnInitializationTimeout() async {
+        // Given
+        let mockFlagsClient = DatadogFlagsClientMock()
+        mockFlagsClient.setEvaluationContextStub = { _, completion in
+            mockFlagsClient.mockStateManager.simulateStateChange(.error)
+            completion(.failure(.networkError(URLError(.timedOut))))
+        }
+        let provider = DatadogProvider(flagsClient: mockFlagsClient)
+        let openFeatureAPI = OpenFeatureAPI()
+        let context = MutableContext(targetingKey: "user123")
+
+        // When
+        await openFeatureAPI.setProviderAndWait(provider: provider, initialContext: context)
+
+        // Then
+        #expect(openFeatureAPI.getProviderStatus() == .error)
+    }
+
     @Test("onContextSet does not throw when state is stale")
     func onContextSetDoesNotThrowWhenStale() async throws {
         // Given
