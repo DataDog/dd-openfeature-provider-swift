@@ -31,14 +31,14 @@ Add this package to your `Package.swift` file:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/Datadog/dd-openfeature-provider-swift.git", from: "0.1.0")
+    .package(url: "https://github.com/Datadog/dd-openfeature-provider-swift.git", "0.2.2"..<"0.3.0")
 ]
 ```
 
 **Via Xcode:**
 1. **File** → **Add Package Dependencies**
 2. Enter: `https://github.com/Datadog/dd-openfeature-provider-swift.git`
-3. Select the latest version
+3. Choose a version range of `0.2.2..<0.3.0` to stay on the iOS-14-compatible 0.2.x line.
 
 ### CocoaPods
 
@@ -47,7 +47,7 @@ dependencies: [
 Add this to your `Podfile`:
 
 ```ruby
-pod 'DatadogOpenFeatureProvider', '~> 0.1.0'
+pod 'DatadogOpenFeatureProvider', '~> 0.2.2'
 ```
 
 Then run:
