@@ -97,7 +97,7 @@ make env-check
 The project uses Swift Package Manager with the following dependency strategy:
 
 - **OpenFeature Swift SDK**: Constrained to the supported 0.3.x API and pinned in `Package.resolved`
-- **Datadog SDK**: `>= 3.13.0, < 3.17.0` to preserve the provider's deployment targets
+- **Datadog SDK**: `>= 3.17.0, < 4.0.0`, requiring iOS 15, tvOS 15, watchOS 9, and a Swift 6.0+ toolchain
 
 ### Updating Dependencies
 

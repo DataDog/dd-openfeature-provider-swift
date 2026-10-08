@@ -6,10 +6,10 @@ import PackageDescription
 let package = Package(
     name: "DatadogOpenFeatureProvider",
     platforms: [
-        .iOS(.v14),
+        .iOS(.v15),
         .macOS("12.6"),
-        .watchOS(.v8),
-        .tvOS(.v14),
+        .watchOS(.v9),
+        .tvOS(.v15),
         .visionOS(.v1),
     ],
     products: [
@@ -20,7 +20,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/open-feature/swift-sdk.git", "0.3.1"..<"0.4.0"),
-        .package(url: "https://github.com/DataDog/dd-sdk-ios.git", "3.13.0"..<"3.17.0"),
+        .package(url: "https://github.com/DataDog/dd-sdk-ios.git", from: "3.17.0"),
     ],
     targets: [
         .target(

@@ -6,13 +6,15 @@ This package provides a bridge between [OpenFeature](https://openfeature.dev/) a
 
 ## Requirements
 
-- **Xcode 15.0+**
-- **Swift 5.9+**
-- **iOS 14.0+ / macOS 12.6+ / watchOS 8.0+ / tvOS 14.0+**
+- **Xcode 16.0+**
+- **Swift 6.0+ toolchain** (the provider continues to use Swift 5 language mode)
+- **iOS 15.0+ / macOS 12.6+ / watchOS 9.0+ / tvOS 15.0+**
 
 ### Datadog SDK Version
 
-The provider requires Datadog SDK versions `>= 3.13.0, < 3.17.0`. The upper bound preserves the provider's existing deployment targets: Datadog SDK 3.17.0 requires iOS 15, tvOS 15, and watchOS 9.
+The upcoming provider 0.3.0 release requires Datadog SDK versions `>= 3.17.0, < 4.0.0` and adopts its minimum platform versions. Datadog SDK 3.17.0 also requires Swift tools 6.0 for Swift Package Manager.
+
+For apps targeting iOS 14, tvOS 14, or watchOS 8, use provider `>= 0.2.2, < 0.3.0` with Datadog SDK `>= 3.13.0, < 3.17.0`. See the [installation guide](INSTALLATION.md) for version constraints.
 
 ### OpenFeature SDK Version
 
@@ -22,8 +24,8 @@ CocoaPods continues to use OpenFeature 0.3.0 because it is the latest version pu
 
 ## Installation
 
-- **Swift Package Manager**: iOS 14+, macOS 12.6+, watchOS 8+, and tvOS 14+
-- **CocoaPods**: iOS 14+ only (the published OpenFeature 0.3.0 pod does not support tvOS or watchOS)
+- **Swift Package Manager**: iOS 15+, macOS 12.6+, watchOS 9+, and tvOS 15+
+- **CocoaPods**: iOS 15+ only (the published OpenFeature 0.3.0 pod does not support tvOS or watchOS)
 
 For installation instructions, see **[INSTALLATION.md](INSTALLATION.md)**.
 
