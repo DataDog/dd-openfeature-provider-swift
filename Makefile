@@ -1,5 +1,5 @@
 all: env-check repo-setup templates
-.PHONY: env-check lint license-check platform-compatibility templates clean test spm-build set-ci-secret help \
+.PHONY: env-check lint license-check platform-compatibility latest-sdk-compatibility test-compatibility-tools templates clean test spm-build set-ci-secret help \
 		smoke-test smoke-test-ios smoke-test-ios-all release-publish-podspecs bump
 
 REPO_ROOT := $(PWD)
@@ -35,6 +35,13 @@ platform-compatibility:
 	swift package resolve
 	git diff --exit-code HEAD -- Package.resolved
 	python3 ./tools/validate-platform-compatibility.py
+
+test-compatibility-tools:
+	python3 -B -m unittest discover -s tools/tests -p 'test_*.py'
+
+latest-sdk-compatibility: test-compatibility-tools
+	@$(ECHO_TITLE) "make latest-sdk-compatibility"
+	python3 -B ./tools/test-latest-sdk-compatibility.py
 
 templates:
 	@$(ECHO_TITLE) "make templates"
@@ -107,6 +114,8 @@ help:
 	@echo "  lint             - Run SwiftLint on source and test files"
 	@echo "  license-check    - Check license headers in source files"
 	@echo "  platform-compatibility - Validate package, xcconfig, lockfile, and dependency platform floors"
+	@echo "  latest-sdk-compatibility - Validate and build with the newest allowed Datadog SDK in a temporary copy"
+	@echo "  test-compatibility-tools - Run offline compatibility-tool regression tests"
 	@echo "  templates        - Install Xcode file templates"
 	@echo "  test             - Run Swift tests"
 	@echo "  spm-build        - Build with Swift Package Manager"
