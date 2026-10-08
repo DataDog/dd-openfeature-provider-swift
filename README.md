@@ -6,13 +6,14 @@ This package provides a bridge between [OpenFeature](https://openfeature.dev/) a
 
 ## Requirements
 
-- **Xcode 16.0+**
-- **Swift 6.0+ toolchain** (the provider continues to use Swift 5 language mode)
+- **Xcode 16.0+ / Swift 6.0+ toolchain with Datadog SDK 3.17.0**; newer SDK releases may require a newer toolchain (the provider continues to use Swift 5 language mode)
 - **iOS 15.0+ / macOS 12.6+ / watchOS 9.0+ / tvOS 15.0+**
 
 ### Datadog SDK Version
 
 The upcoming provider 0.3.0 release requires Datadog SDK versions `>= 3.17.0, < 4.0.0` and adopts its minimum platform versions. Datadog SDK 3.17.0 also requires Swift tools 6.0 for Swift Package Manager.
+
+Datadog SDK 3.19.0 requires Swift tools 6.2 (Xcode 26 or later). If you use an older toolchain, select a compatible SDK version within the supported range. See the [installation guide](INSTALLATION.md) for details.
 
 For apps targeting iOS 14, tvOS 14, or watchOS 8, use provider `>= 0.2.2, < 0.3.0` with Datadog SDK `>= 3.13.0, < 3.17.0`. See the [installation guide](INSTALLATION.md) for version constraints.
 

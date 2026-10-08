@@ -77,6 +77,8 @@ xcodebuild -scheme DatadogOpenFeatureProvider -destination "generic/platform=wat
 
 The check explicitly requests that SDK version and verifies the resolved pin, so an incompatible release cannot be hidden by a fallback to an older SDK. It reuses platform compatibility validation, runs provider unit tests, and builds a consumer for iOS, macOS, tvOS, and watchOS at the provider's advertised deployment minimums. The consumer pins the selected SDK exactly. Prerelease tags are excluded; dependency constraints are never widened. CocoaPods remains covered by the existing smoke tests.
 
+This job uses Xcode 26.0 on the `macos:sequoia-arm64` runner, matching the SDK 3.19.0 toolchain requirement of Swift 6.2. The pinned-SDK checks continue to use Xcode 16.2 with SDK 3.17.0. When running this check locally, select a toolchain that supports the newest allowed SDK; an older toolchain is a failure, not a reason to skip that SDK.
+
 Run `make test-compatibility-tools` for offline regression tests, or `python3 -B tools/test-latest-sdk-compatibility.py --check-only` for dependency resolution and platform validation without builds. `--repository-root PATH` can check a different provider checkout or extracted release for regression investigations.
 
 The **Latest SDK Compatibility** GitLab job runs in regular provider pipelines and supports scheduled pipelines. To detect SDK releases without a provider commit, a maintainer must create a [GitLab pipeline schedule](https://docs.gitlab.com/ci/pipelines/schedules/) targeting `develop` after this change merges (and `main` once it contains the job). The schedule is configured in GitLab, not created by this PR. These pipelines also run the normal checks and must not set `RELEASE_GIT_TAG` or publishing variables. No cross-repository release trigger is configured.
@@ -107,7 +109,7 @@ make env-check
 The project uses Swift Package Manager with the following dependency strategy:
 
 - **OpenFeature Swift SDK**: Constrained to the supported 0.3.x API and pinned in `Package.resolved`
-- **Datadog SDK**: `>= 3.17.0, < 4.0.0`, requiring iOS 15, tvOS 15, watchOS 9, and a Swift 6.0+ toolchain
+- **Datadog SDK**: `>= 3.17.0, < 4.0.0`, requiring iOS 15, tvOS 15, and watchOS 9. SDK 3.17.0 requires Swift tools 6.0; SDK 3.19.0 requires Swift tools 6.2. The toolchain requirement depends on the resolved SDK version.
 
 ### Updating Dependencies
 

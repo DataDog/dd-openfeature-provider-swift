@@ -6,8 +6,7 @@ The requirements and installation examples below apply to the upcoming 0.3.0 rel
 
 ## Requirements
 
-- **Xcode 16.0+**
-- **Swift 6.0+ toolchain** (the provider continues to use Swift 5 language mode)
+- **Xcode 16.0+ / Swift 6.0+ toolchain with Datadog SDK 3.17.0**; newer SDK releases may require a newer toolchain (the provider continues to use Swift 5 language mode)
 - **Platform Support:**
   - **Swift Package Manager**: iOS 15.0+, macOS 12.6+, watchOS 9.0+, tvOS 15.0+
   - **CocoaPods**: iOS 15.0+ only
@@ -16,6 +15,8 @@ The requirements and installation examples below apply to the upcoming 0.3.0 rel
   - OpenFeature Swift SDK: 0.3.1 with Swift Package Manager; 0.3.0 with CocoaPods
 
 If your app also declares the Datadog SDK directly, its dependency requirement must overlap `>= 3.17.0, < 4.0.0`.
+
+For Swift Package Manager, the required toolchain depends on the resolved SDK version: SDK 3.17.0 requires Swift tools 6.0, while SDK 3.19.0 requires Swift tools 6.2 (Xcode 26 or later). To keep using Xcode 16 with Swift 6.0, explicitly select a compatible SDK, for example `.package(url: "https://github.com/DataDog/dd-sdk-ios.git", exact: "3.17.0")`. Do not pin SDK 3.19.0 on a toolchain that cannot build its manifest.
 
 ### Older OS Targets
 
