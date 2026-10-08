@@ -10,6 +10,10 @@ This package provides a bridge between [OpenFeature](https://openfeature.dev/) a
 - **Swift 5.9+**
 - **iOS 14.0+ / macOS 12.6+ / watchOS 8.0+ / tvOS 14.0+**
 
+### Datadog SDK Version
+
+The provider requires Datadog SDK versions `>= 3.13.0, < 3.17.0`. The upper bound preserves the provider's existing deployment targets: Datadog SDK 3.17.0 requires iOS 15, tvOS 15, and watchOS 9.
+
 ### OpenFeature SDK Version
 
 Swift Package Manager uses OpenFeature Swift SDK 0.3.1, the first release with watchOS and tvOS support. OpenFeature 0.4 and later require compatibility changes that will be handled separately.

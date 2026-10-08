@@ -10,8 +10,10 @@ This guide covers how to install the Datadog OpenFeature Provider in your iOS, m
   - **Swift Package Manager**: iOS 14.0+, macOS 12.6+, watchOS 8.0+, tvOS 14.0+
   - **CocoaPods**: iOS 14.0+ only
 - **Dependencies:**
-  - Datadog SDK: 3.13.0+
+  - Datadog SDK: `>= 3.13.0, < 3.17.0`
   - OpenFeature Swift SDK: 0.3.1 with Swift Package Manager; 0.3.0 with CocoaPods
+
+Datadog SDK 3.17.0 raises the minimum supported platform versions and is excluded to preserve the provider's existing deployment targets. If your app also declares the Datadog SDK directly, its dependency requirement must overlap `>= 3.13.0, < 3.17.0`.
 
 ## Prerequisites
 
