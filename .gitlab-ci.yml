@@ -101,6 +101,16 @@ Platform Compatibility:
 # │ Platform Build Testing:  │
 # └──────────────────────────┘
 
+Latest SDK Compatibility:
+  stage: test
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - !reference [.test-pipeline-job, rules]
+    - !reference [.release-pipeline-job, rules]
+  script:
+    - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE" --tvOS --watchOS
+    - make latest-sdk-compatibility
+
 Platform Tests (iOS):
   stage: test
   rules: 
