@@ -71,6 +71,16 @@ xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=tvOS Simula
 xcodebuild -scheme DatadogOpenFeatureProvider -destination "generic/platform=watchOS" build
 ```
 
+### Latest Datadog SDK Compatibility
+
+`make latest-sdk-compatibility` checks the newest stable Datadog SDK tag allowed by `Package.swift`, independently of the SDK version pinned in `Package.resolved`. It works in a temporary copy and leaves the checkout and lockfile unchanged.
+
+The check explicitly requests that SDK version and verifies the resolved pin, so an incompatible release cannot be hidden by a fallback to an older SDK. It reuses platform compatibility validation, runs provider unit tests, and builds a consumer for iOS, macOS, tvOS, and watchOS at the provider's advertised deployment minimums. The consumer pins the selected SDK exactly. Prerelease tags are excluded; dependency constraints are never widened. CocoaPods remains covered by the existing smoke tests.
+
+Run `make test-compatibility-tools` for offline regression tests, or `python3 -B tools/test-latest-sdk-compatibility.py --check-only` for dependency resolution and platform validation without builds. `--repository-root PATH` can check a different provider checkout or extracted release for regression investigations.
+
+The **Latest SDK Compatibility** GitLab job runs in regular provider pipelines and supports scheduled pipelines. To detect SDK releases without a provider commit, a maintainer must create a [GitLab pipeline schedule](https://docs.gitlab.com/ci/pipelines/schedules/) targeting `develop` after this change merges (and `main` once it contains the job). The schedule is configured in GitLab, not created by this PR. These pipelines also run the normal checks and must not set `RELEASE_GIT_TAG` or publishing variables. No cross-repository release trigger is configured.
+
 ## Code Quality
 
 ### Linting

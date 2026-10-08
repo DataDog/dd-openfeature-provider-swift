@@ -13,9 +13,6 @@ from typing import Optional
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
-PACKAGE_RESOLVED = REPOSITORY_ROOT / "Package.resolved"
-BASE_XCCONFIG = REPOSITORY_ROOT / "xcconfigs" / "Base.xcconfig"
-CHECKOUTS = REPOSITORY_ROOT / ".build" / "checkouts"
 
 # These are the Apple platforms the provider publicly supports and exercises in CI.
 PLATFORM_XCCONFIG_KEYS = {
@@ -106,11 +103,14 @@ def fail(errors: list[str]) -> None:
     raise SystemExit(1)
 
 
-def main() -> None:
+def main(repository_root: Path = REPOSITORY_ROOT) -> None:
+    package_resolved = repository_root / "Package.resolved"
+    base_xcconfig = repository_root / "xcconfigs" / "Base.xcconfig"
+    checkouts = repository_root / ".build" / "checkouts"
     errors = []
-    root_package = dump_package(REPOSITORY_ROOT)
+    root_package = dump_package(repository_root)
     root_platforms = package_platforms(root_package)
-    xcconfig = parse_xcconfig(BASE_XCCONFIG)
+    xcconfig = parse_xcconfig(base_xcconfig)
 
     for platform, setting in PLATFORM_XCCONFIG_KEYS.items():
         package_version = root_platforms.get(platform)
@@ -118,13 +118,13 @@ def main() -> None:
         if package_version is None:
             errors.append(f"Package.swift does not declare {platform}")
         elif xcconfig_version is None:
-            errors.append(f"{BASE_XCCONFIG.relative_to(REPOSITORY_ROOT)} does not declare {setting}")
+            errors.append(f"{base_xcconfig.relative_to(repository_root)} does not declare {setting}")
         elif version_tuple(package_version) != version_tuple(xcconfig_version):
             errors.append(
                 f"{platform} is {package_version} in Package.swift but {xcconfig_version} in {setting}"
             )
 
-    resolved = json.loads(PACKAGE_RESOLVED.read_text())
+    resolved = json.loads(package_resolved.read_text())
     pins = {pin["identity"]: pin for pin in resolved.get("pins", [])}
 
     openfeature_pin = pins.get(OPENFEATURE_IDENTITY)
@@ -148,12 +148,12 @@ def main() -> None:
 
     for identity in DIRECT_DEPENDENCIES:
         pin = pins.get(identity)
-        checkout = CHECKOUTS / identity
+        checkout = checkouts / identity
         if pin is None:
             errors.append(f"Package.resolved does not pin direct dependency {identity}")
             continue
         if not checkout.is_dir():
-            errors.append(f"Missing resolved checkout {checkout.relative_to(REPOSITORY_ROOT)}")
+            errors.append(f"Missing resolved checkout {checkout.relative_to(repository_root)}")
             continue
 
         expected_revision = pin.get("state", {}).get("revision")
