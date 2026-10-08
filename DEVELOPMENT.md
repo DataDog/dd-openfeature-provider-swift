@@ -97,7 +97,7 @@ make env-check
 The project uses Swift Package Manager with the following dependency strategy:
 
 - **OpenFeature Swift SDK**: Constrained to the supported 0.3.x API and pinned in `Package.resolved`
-- **Datadog SDK**: Flexible range from minimum supported version (see Package.swift)
+- **Datadog SDK**: `>= 3.13.0, < 3.17.0` to preserve the provider's deployment targets
 
 ### Updating Dependencies
 
@@ -108,11 +108,12 @@ The project uses Swift Package Manager with the following dependency strategy:
    # Update DEVELOPMENT.md requirements
    ```
 
-2. **For Datadog SDK** (backward compatible):
+2. **For Datadog SDK**:
    ```bash
-   # Version range automatically allows newer versions
-   # Test compatibility with: make test
-   # Update README.md minimum version if needed
+   # Keep Package.swift and the podspec dependency bounds aligned
+   # Check deployment targets before widening the supported range
+   # Test compatibility with: make platform-compatibility test
+   # Update README.md and INSTALLATION.md requirements if needed
    ```
 
 ## CI/CD

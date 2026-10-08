@@ -1,5 +1,6 @@
 # Unreleased
 
+- [FIXED] Constrain the Datadog SDK dependency to `>= 3.13.0, < 3.17.0` in Swift Package Manager and CocoaPods to preserve the provider's existing deployment targets, including iOS 14.
 - [FIXED] Require OpenFeature Swift SDK 0.3.1 for Swift Package Manager so the advertised watchOS and tvOS platforms use the first upstream release that supports them.
 - [FIXED] Align the shared Xcode configuration with the watchOS 8 deployment target declared by the package.
 - [CHANGED] Raise the minimum supported watchOS version from 7 to 8.
