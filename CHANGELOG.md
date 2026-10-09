@@ -1,3 +1,9 @@
+# Unreleased
+
+- [CHANGED] Require Datadog SDK `>= 3.17.0, < 4.0.0` in Swift Package Manager and CocoaPods.
+- [CHANGED] Raise the minimum supported platforms to iOS 15, tvOS 15, and watchOS 9 to match Datadog SDK 3.17.0. macOS 12.6 and visionOS 1 requirements are unchanged. Apps targeting older OS versions must remain on provider `>= 0.2.2, < 0.3.0`.
+- [CHANGED] Require Xcode 16 and a Swift 6.0+ toolchain for the Datadog SDK dependency. The provider's Swift language mode is unchanged.
+
 # 0.2.2 / 2026-10-08
 
 - [FIXED] Constrain the Datadog SDK dependency to `>= 3.13.0, < 3.17.0` in Swift Package Manager and CocoaPods to preserve the provider's existing deployment targets, including iOS 14.

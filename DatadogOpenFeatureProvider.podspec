@@ -12,13 +12,13 @@ Pod::Spec.new do |s|
   }
 
   s.swift_version = '5.9'
-  s.ios.deployment_target = '14.0'
+  s.ios.deployment_target = '15.0'
 
   s.source = { :git => "https://github.com/DataDog/dd-openfeature-provider-swift.git", :tag => s.version.to_s }
 
   s.source_files = "Sources/DatadogOpenFeatureProvider/**/*.swift"
 
   s.dependency 'OpenFeature', '~> 0.3.0'
-  s.dependency 'DatadogFlags', '>= 3.13.0', '< 3.17.0'
+  s.dependency 'DatadogFlags', '>= 3.17.0', '< 4.0.0'
 
 end
