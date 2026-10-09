@@ -103,6 +103,9 @@ Platform Compatibility:
 
 Latest SDK Compatibility:
   stage: test
+  # Temporary until the Sequoia runner is provisioned and this job succeeds.
+  when: manual
+  allow_failure: true
   tags:
     - macos:sequoia-arm64
     - specific:true
