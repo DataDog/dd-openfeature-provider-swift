@@ -101,6 +101,25 @@ Platform Compatibility:
 # │ Platform Build Testing:  │
 # └──────────────────────────┘
 
+Latest SDK Compatibility:
+  stage: test
+  # Temporary until the Sequoia runner is provisioned and this job succeeds.
+  when: manual
+  allow_failure: true
+  tags:
+    - macos:sequoia-arm64
+    - specific:true
+  variables:
+    # SDK 3.19.0 requires Swift 6.2; keep pinned-SDK jobs on DEFAULT_XCODE.
+    LATEST_SDK_XCODE: "26.0.0"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - !reference [.test-pipeline-job, rules]
+    - !reference [.release-pipeline-job, rules]
+  script:
+    - ./tools/runner-setup.sh --xcode "$LATEST_SDK_XCODE" --iOS --tvOS --watchOS
+    - make latest-sdk-compatibility
+
 Platform Tests (iOS):
   stage: test
   rules: 
