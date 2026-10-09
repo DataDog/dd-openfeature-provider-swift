@@ -2,7 +2,7 @@
 
 This guide covers how to install the Datadog OpenFeature Provider in your iOS, macOS, tvOS, or watchOS project.
 
-The requirements and installation examples below apply to the upcoming 0.3.0 release. Until it is published, use the [0.2.2 installation guide](https://github.com/DataDog/dd-openfeature-provider-swift/blob/0.2.2/INSTALLATION.md).
+The requirements and installation examples below apply to provider 0.3.0. For older OS targets, use the [0.2.2 installation guide](https://github.com/DataDog/dd-openfeature-provider-swift/blob/0.2.2/INSTALLATION.md).
 
 ## Requirements
 
