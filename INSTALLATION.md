@@ -2,18 +2,25 @@
 
 This guide covers how to install the Datadog OpenFeature Provider in your iOS, macOS, tvOS, or watchOS project.
 
+The requirements and installation examples below apply to provider 0.3.0. For older OS targets, use the [0.2.2 installation guide](https://github.com/DataDog/dd-openfeature-provider-swift/blob/0.2.2/INSTALLATION.md).
+
 ## Requirements
 
-- **Xcode 15.0+**
-- **Swift 5.9+**
+- **Xcode 16.0+ / Swift 6.0+ toolchain with Datadog SDK 3.17.0**; newer SDK releases may require a newer toolchain (the provider continues to use Swift 5 language mode)
 - **Platform Support:**
-  - **Swift Package Manager**: iOS 14.0+, macOS 12.6+, watchOS 8.0+, tvOS 14.0+
-  - **CocoaPods**: iOS 14.0+ only
+  - **Swift Package Manager**: iOS 15.0+, macOS 12.6+, watchOS 9.0+, tvOS 15.0+
+  - **CocoaPods**: iOS 15.0+ only
 - **Dependencies:**
-  - Datadog SDK: `>= 3.13.0, < 3.17.0`
+  - Datadog SDK: `>= 3.17.0, < 4.0.0`
   - OpenFeature Swift SDK: 0.3.1 with Swift Package Manager; 0.3.0 with CocoaPods
 
-Datadog SDK 3.17.0 raises the minimum supported platform versions and is excluded to preserve the provider's existing deployment targets. If your app also declares the Datadog SDK directly, its dependency requirement must overlap `>= 3.13.0, < 3.17.0`.
+If your app also declares the Datadog SDK directly, its dependency requirement must overlap `>= 3.17.0, < 4.0.0`.
+
+For Swift Package Manager, the required toolchain depends on the resolved SDK version: SDK 3.17.0 requires Swift tools 6.0, while SDK 3.19.0 requires Swift tools 6.2 (Xcode 26 or later). To keep using Xcode 16 with Swift 6.0, explicitly select a compatible SDK, for example `.package(url: "https://github.com/DataDog/dd-sdk-ios.git", exact: "3.17.0")`. Do not pin SDK 3.19.0 on a toolchain that cannot build its manifest.
+
+### Older OS Targets
+
+Apps that need iOS 14, tvOS 14, or watchOS 8 must stay on provider `>= 0.2.2, < 0.3.0`, which requires Datadog SDK `>= 3.13.0, < 3.17.0`. Use `"0.2.2"..<"0.3.0"` in Swift Package Manager or `~> 0.2.2` in CocoaPods.
 
 ## Prerequisites
 
@@ -31,14 +38,14 @@ Add this package to your `Package.swift` file:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/Datadog/dd-openfeature-provider-swift.git", "0.2.2"..<"0.3.0")
+    .package(url: "https://github.com/Datadog/dd-openfeature-provider-swift.git", "0.3.0"..<"0.4.0")
 ]
 ```
 
 **Via Xcode:**
 1. **File** → **Add Package Dependencies**
 2. Enter: `https://github.com/Datadog/dd-openfeature-provider-swift.git`
-3. Choose a version range of `0.2.2..<0.3.0` to stay on the iOS-14-compatible 0.2.x line.
+3. Choose a version range of `0.3.0..<0.4.0`.
 
 ### CocoaPods
 
@@ -47,7 +54,7 @@ dependencies: [
 Add this to your `Podfile`:
 
 ```ruby
-pod 'DatadogOpenFeatureProvider', '~> 0.2.2'
+pod 'DatadogOpenFeatureProvider', '~> 0.3.0'
 ```
 
 Then run:

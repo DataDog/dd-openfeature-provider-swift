@@ -2,10 +2,10 @@
 // Note: all configuration here will be applied to artifacts produced by dependency managers.
 
 // Minimum deployment targets for building the SDK
-IPHONEOS_DEPLOYMENT_TARGET=14.0
-TVOS_DEPLOYMENT_TARGET=14.0
+IPHONEOS_DEPLOYMENT_TARGET=15.0
+TVOS_DEPLOYMENT_TARGET=15.0
 MACOSX_DEPLOYMENT_TARGET=12.6
-WATCHOS_DEPLOYMENT_TARGET=8.0
+WATCHOS_DEPLOYMENT_TARGET=9.0
 
 // Minimum supported Swift version
 SWIFT_VERSION=5.9
