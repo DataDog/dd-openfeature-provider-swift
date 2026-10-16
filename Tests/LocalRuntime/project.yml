@@ -1,0 +1,35 @@
+name: ProviderOptOutRuntime
+options:
+  bundleIdPrefix: com.datadoghq.local
+packages:
+  Provider:
+    path: ../..
+  Datadog:
+    path: ../../Packages/dd-sdk-ios
+targets:
+  ProviderOptOutRuntimeTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: '15.0'
+    sources:
+      - ../DatadogOpenFeatureProviderTests
+    settings:
+      GENERATE_INFOPLIST_FILE: YES
+      SWIFT_VERSION: '5.0'
+      CODE_SIGNING_ALLOWED: NO
+    dependencies:
+      - package: Provider
+        product: DatadogOpenFeatureProvider
+      - package: Datadog
+        product: DatadogCore
+      - package: Datadog
+        product: DatadogFlags
+      - package: Datadog
+        product: DatadogRUM
+schemes:
+  ProviderOptOutRuntime:
+    build:
+      targets:
+        ProviderOptOutRuntimeTests: [test]
+    test:
+      targets: [ProviderOptOutRuntimeTests]

@@ -24,6 +24,31 @@ public class DatadogProvider: FeatureProvider {
         self.metadata = DatadogProviderMetadata()
     }
 
+    /// Creates a provider with an optional local evaluation telemetry control.
+    ///
+    /// When enabled, only boolean `true` at `dd_evaluation_telemetry_opt_out` suppresses new
+    /// evaluation events, counts, and automatic RUM flag annotations. Exposures remain unchanged.
+    /// Changes to only this attribute apply locally without requesting assignments.
+    /// Existing named clients retain their original configuration.
+    ///
+    /// - Parameters:
+    ///   - enableEvaluationTelemetryOptOutParameter: Enables the reserved context attribute.
+    ///     The original initializer leaves this control disabled.
+    ///   - name: A unique native client name. Defaults to the default Flags client name.
+    ///   - core: The Datadog SDK core. Defaults to the shared instance.
+    public init(
+        enableEvaluationTelemetryOptOutParameter: Bool,
+        name: String = FlagsClient.defaultName,
+        core: DatadogCoreProtocol = CoreRegistry.default
+    ) {
+        self.flagsClient = FlagsClient.create(
+            configuration: .init(enableEvaluationTelemetryOptOutParameter: enableEvaluationTelemetryOptOutParameter),
+            name: name,
+            in: core
+        )
+        self.metadata = DatadogProviderMetadata()
+    }
+
     /// Internal initializer for testing purposes only
     internal init(flagsClient: FlagsClientProtocol) {
         self.flagsClient = flagsClient
