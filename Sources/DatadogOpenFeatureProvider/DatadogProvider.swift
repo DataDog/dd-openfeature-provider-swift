@@ -24,15 +24,15 @@ public class DatadogProvider: FeatureProvider {
         self.metadata = DatadogProviderMetadata()
     }
 
-    /// Creates a provider with an optional local evaluation telemetry control.
+    /// Creates a provider with an optional evaluation telemetry control.
     ///
     /// When enabled, only boolean `true` at `dd_evaluation_telemetry_opt_out` suppresses new
     /// evaluation events, counts, and automatic RUM flag annotations. Exposures remain unchanged.
-    /// Changes to only this attribute apply locally without requesting assignments.
+    /// The attribute remains available for targeting and exposure reporting. Context changes refresh assignments.
     /// Existing named clients retain their original configuration.
     ///
     /// - Parameters:
-    ///   - enableEvaluationTelemetryOptOutParameter: Enables the reserved context attribute.
+    ///   - enableEvaluationTelemetryOptOutParameter: Enables evaluation telemetry suppression through the context attribute.
     ///     The original initializer leaves this control disabled.
     ///   - name: A unique native client name. Defaults to the default Flags client name.
     ///   - core: The Datadog SDK core. Defaults to the shared instance.

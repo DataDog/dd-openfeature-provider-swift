@@ -103,9 +103,9 @@ await OpenFeatureAPI.shared.setProviderAndWait(provider: provider, initialContex
 
 The original `DatadogProvider(name:core:)` initializer leaves the control disabled. When enabled, only typed boolean `true` suppresses new evaluation events, counts, and automatic RUM flag annotations. Missing, false, null, strings, numbers, and other types preserve telemetry.
 
-Change the policy through `OpenFeatureAPI.setEvaluationContextAndWait(evaluationContext:)`. Changes to only this reserved attribute apply locally. They do not request assignments, clear cached values, or change native readiness. The native client consumes this attribute before assignment requests. Genuine targeting changes retain normal refresh behavior.
+Update the context through `OpenFeatureAPI.setEvaluationContextAndWait(evaluationContext:)`. The attribute remains available in assignment requests, stored context, and exposure attributes. Applications can use it in targeting rules. Changes use the normal assignment refresh and exposure deduplication behavior. The latest requested context controls telemetry suppression while a refresh is pending or fails.
 
-Flag values, details, exposures, unrelated telemetry, and customer hooks remain unchanged. Each named client keeps its own configuration. Reusing a name keeps its original configuration. The control does not remove previously recorded events or RUM annotations.
+Telemetry suppression does not change flag evaluation, exposure logging, unrelated telemetry, or customer hooks. A targeting rule can change an assignment when the attribute changes. Each named client keeps its own configuration. Reusing a name keeps its original configuration. The control does not remove previously recorded events or RUM annotations.
 
 Exposure events can still contain subject data. This control does not replace SDK tracking consent.
 

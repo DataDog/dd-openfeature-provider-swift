@@ -27,4 +27,4 @@ xcodebuild -project .build/local-runtime/ProviderOptOutRuntime.xcodeproj \
 
 Check that the build log resolves `Datadog` to `Packages/dd-sdk-ios`. A published SDK build does not validate the companion change.
 
-The XCTest runtime cases include strict types, disabled activation, customer hooks, local context transitions, delayed responses, failed refreshes, cached assignments, and independent named clients. The existing Swift Testing suite runs in the same test target.
+The XCTest runtime cases include strict types, disabled activation, customer hooks, context refreshes, targeting, exposure attributes, delayed responses, failed refreshes, cached assignments, and independent named clients. The existing Swift Testing suite runs in the same test target.

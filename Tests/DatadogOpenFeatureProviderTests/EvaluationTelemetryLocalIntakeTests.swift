@@ -34,6 +34,54 @@ final class EvaluationTelemetryLocalIntakeTests: XCTestCase {
     }
 
     @MainActor
+    func testAttributeTargetsAssignmentsThroughOpenFeatureAndPreservesExposureDeduplication() async throws {
+        for enabled in [false, true] {
+            let ready = expectation(description: "targeting intake ready")
+            let server = try ProviderLocalIntake(ready: ready)
+            server.start()
+            await fulfillment(of: [ready], timeout: 5)
+            defer { server.stop() }
+            let instanceName = "provider-targeting-\(UUID().uuidString)"
+            let core = Datadog.initialize(with: .init(clientToken: "local-intake-token", env: "local-test"), trackingConsent: .granted, instanceName: instanceName)
+            defer { Datadog.internalFlushAndDeinitialize(instanceName: instanceName) }
+            Flags.enable(
+                with: .init(customFlagsEndpoint: try server.url("assignments"), customExposureEndpoint: try server.url("exposures"), customEvaluationEndpoint: try server.url("evaluations")),
+                in: core
+            )
+            let provider = DatadogProvider(enableEvaluationTelemetryOptOutParameter: enabled, core: core)
+            let api = OpenFeatureAPI()
+            defer { api.clearProvider() }
+            await api.setProviderAndWait(provider: provider, initialContext: context(.boolean(false)))
+            let client = api.getClient()
+            let hook = CustomerHook()
+            client.addHooks(hook)
+            for (index, optOut) in [false, true, false].enumerated() {
+                if index > 0 {
+                    await api.setEvaluationContextAndWait(evaluationContext: context(.boolean(optOut)))
+                }
+                let details = client.getBooleanDetails(key: "targeting-flag", defaultValue: !optOut)
+                XCTAssertEqual(details.value, optOut)
+                XCTAssertEqual(details.variant, String(optOut))
+                XCTAssertEqual(details.reason, "TARGETING_MATCH")
+                XCTAssertEqual(details.flagMetadata["allocationKey"], .string("targeted-allocation"))
+                XCTAssertEqual(client.getBooleanValue(key: "targeting-flag", defaultValue: !optOut), optOut)
+            }
+            XCTAssertEqual(hook.calls, 6)
+            Datadog.internalFlushAndDeinitialize(instanceName: instanceName)
+            let exposedValues = try server.events(at: "exposures").map { exposure in
+                let subject = try XCTUnwrap(exposure["subject"] as? [String: Any])
+                let attributes = try XCTUnwrap(subject["attributes"] as? [String: Any])
+                return try XCTUnwrap(attributes["dd_evaluation_telemetry_opt_out"] as? Bool)
+            }
+            XCTAssertEqual(exposedValues, [false, true, false])
+            let evaluationCount = try server.evaluations().reduce(0) { $0 + ($1["evaluation_count"] as? Int ?? 0) }
+            XCTAssertEqual(evaluationCount, enabled ? 4 : 6)
+            XCTAssertEqual(server.assignmentCount, 3)
+            print("Provider targeting: enabled=\(enabled), assignments=3, exposures=3, evaluations=\(evaluationCount), hooks=6")
+        }
+    }
+
+    @MainActor
     private func runLocalIntake(enabled: Bool, value: Value?) async throws {
         let ready = expectation(description: "loopback intake ready")
         let server = try ProviderLocalIntake(ready: ready)
@@ -98,12 +146,19 @@ final class EvaluationTelemetryLocalIntakeTests: XCTestCase {
         XCTAssertTrue(rum.contains { $0["type"] as? String == "view" })
         XCTAssertTrue(rum.contains { $0["type"] as? String == "error" })
         XCTAssertEqual(rum.contains { ($0["feature_flags"] as? [String: Any])?["local-flag"] != nil }, !optedOut)
-        let body = String(decoding: try XCTUnwrap(assignments.first?.httpBody), as: UTF8.self)
-        XCTAssertEqual(body.contains("dd_evaluation_telemetry_opt_out"), !enabled && value != nil)
+        let requestBody = try JSONSerialization.jsonObject(with: XCTUnwrap(assignments.first?.httpBody)) as? [String: Any]
+        let data = try XCTUnwrap(requestBody?["data"] as? [String: Any])
+        let requestAttributes = try XCTUnwrap(data["attributes"] as? [String: Any])
+        let requestSubject = try XCTUnwrap(requestAttributes["subject"] as? [String: Any])
+        let targetingAttributes = try XCTUnwrap(requestSubject["targeting_attributes"] as? NSDictionary)
+        let expectedAttributes = try JSONSerialization.jsonObject(with: JSONEncoder().encode(FlagsEvaluationContext(context).attributes)) as? NSDictionary
+        XCTAssertEqual(targetingAttributes, expectedAttributes)
+        let exposureSubject = try XCTUnwrap(exposures.first?["subject"] as? [String: Any])
+        XCTAssertEqual(exposureSubject["attributes"] as? NSDictionary, expectedAttributes)
     }
 
     @MainActor
-    func testLocalTransitionsPreserveClientsAndCachedAssignmentsAfterFailure() async throws {
+    func testContextRefreshesPreserveClientsAndCurrentTelemetryAfterFailure() async throws {
         let ready = expectation(description: "loopback intake ready")
         let server = try ProviderLocalIntake(ready: ready)
         server.start()
@@ -120,6 +175,7 @@ final class EvaluationTelemetryLocalIntakeTests: XCTestCase {
         let provider = DatadogProvider(enableEvaluationTelemetryOptOutParameter: true, name: "controlled", core: core)
         let normal = DatadogProvider(enableEvaluationTelemetryOptOutParameter: false, name: "normal", core: core)
         let api = OpenFeatureAPI()
+        defer { api.clearProvider() }
         await api.setProviderAndWait(provider: provider, initialContext: context(.boolean(false)))
         try await normal.initialize(initialContext: context(.boolean(true)))
         let client = api.getClient()
@@ -136,7 +192,7 @@ final class EvaluationTelemetryLocalIntakeTests: XCTestCase {
         await api.setEvaluationContextAndWait(evaluationContext: context(.string("true")))
         XCTAssertTrue(client.getBooleanValue(key: "string-flag", defaultValue: false))
         await api.setEvaluationContextAndWait(evaluationContext: context(.boolean(true)))
-        XCTAssertEqual(server.assignmentCount, 2)
+        XCTAssertEqual(server.assignmentCount, 5)
 
         // Repeating a complete context preserves explicit refresh behavior.
         let held = expectation(description: "assignment refresh held")
@@ -145,21 +201,29 @@ final class EvaluationTelemetryLocalIntakeTests: XCTestCase {
         await fulfillment(of: [held], timeout: 5)
         let nativeClient = FlagsClient.shared(named: "controlled", in: core)
         XCTAssertEqual(nativeClient.state.currentState, .reconciling)
-        await api.setEvaluationContextAndWait(evaluationContext: context(.boolean(false)))
-        XCTAssertEqual(nativeClient.state.currentState, .reconciling)
-        XCTAssertEqual(server.assignmentCount, 3)
+        XCTAssertEqual(server.assignmentCount, 6)
         server.releaseAssignments(status: 500)
         try await refresh.value
         XCTAssertEqual(nativeClient.state.currentState, .stale)
+
+        let changedHeld = expectation(description: "changed context refresh held")
+        server.holdAssignments { changedHeld.fulfill() }
+        let changedRefresh = Task { await api.setEvaluationContextAndWait(evaluationContext: context(.boolean(false))) }
+        await fulfillment(of: [changedHeld], timeout: 5)
+        XCTAssertEqual(nativeClient.state.currentState, .reconciling)
         let cached = client.getBooleanDetails(key: "cached-visible-flag", defaultValue: false)
         XCTAssertTrue(cached.value)
-        // In-memory assignments retain their original reason after a failed refresh.
+        // In-memory assignments retain their original reason while a refresh is pending.
         XCTAssertEqual(cached.reason, "TARGETING_MATCH")
         XCTAssertEqual(cached.variant, "enabled")
+        server.releaseAssignments(status: 500)
+        await changedRefresh.value
+        XCTAssertEqual(nativeClient.state.currentState, .error)
+        XCTAssertFalse(try provider.getBooleanEvaluation(key: "failed-default", defaultValue: false, context: nil).value)
         await api.setEvaluationContextAndWait(evaluationContext: context(.boolean(true)))
         XCTAssertTrue(client.getBooleanValue(key: "cached-hidden-flag", defaultValue: false))
-        XCTAssertEqual(nativeClient.state.currentState, .stale)
-        XCTAssertEqual(server.assignmentCount, 3)
+        XCTAssertEqual(nativeClient.state.currentState, .ready)
+        XCTAssertEqual(server.assignmentCount, 8)
         try XCTUnwrap(core as? DatadogCore).flush()
         monitor.addError(message: "unrelated transition error")
         monitor.stopView(key: "transitions")
@@ -170,8 +234,8 @@ final class EvaluationTelemetryLocalIntakeTests: XCTestCase {
         let exposures = try server.events(at: "exposures")
         let rum = try server.events(at: "rum")
         print("Provider transitions: assignments=\(server.assignmentCount), exposures=\(exposures.count), evaluation keys=\(keys.sorted())")
-        XCTAssertEqual(Set(keys), ["initial-flag", "normal-flag", "string-flag", "cached-visible-flag"])
-        XCTAssertEqual(evaluations.count, 4)
+        XCTAssertEqual(Set(keys), ["initial-flag", "normal-flag", "string-flag", "cached-visible-flag", "failed-default"])
+        XCTAssertEqual(evaluations.count, 5)
         XCTAssertEqual(exposures.count, 6)
         XCTAssertFalse(rum.contains { ($0["feature_flags"] as? [String: Any])?["hidden-flag"] != nil })
         XCTAssertFalse(rum.contains { ($0["feature_flags"] as? [String: Any])?["cached-hidden-flag"] != nil })
@@ -198,21 +262,25 @@ final class EvaluationTelemetryLocalIntakeTests: XCTestCase {
         server.holdAssignments { held.fulfill() }
         let initialize = Task { try await provider.initialize(initialContext: context(.boolean(false))) }
         await fulfillment(of: [held], timeout: 5)
-        try await provider.onContextSet(oldContext: context(.boolean(false)), newContext: context(.boolean(true)))
+        let changedHeld = expectation(description: "opt-out refresh held")
+        server.holdAssignments { changedHeld.fulfill() }
+        let changeContext = Task { try await provider.onContextSet(oldContext: context(.boolean(false)), newContext: context(.boolean(true))) }
+        await fulfillment(of: [changedHeld], timeout: 5)
         XCTAssertFalse(try provider.getBooleanEvaluation(key: "not-ready", defaultValue: false, context: nil).value)
-        XCTAssertEqual(server.assignmentCount, 1)
+        XCTAssertEqual(server.assignmentCount, 2)
         server.releaseAssignments(status: 200)
         try await initialize.value
+        try await changeContext.value
         XCTAssertTrue(try provider.getBooleanEvaluation(key: "hidden-flag", defaultValue: false, context: nil).value)
         try await provider.onContextSet(oldContext: context(.boolean(true)), newContext: context(.boolean(false)))
         XCTAssertTrue(try provider.getBooleanEvaluation(key: "visible-flag", defaultValue: false, context: nil).value)
-        XCTAssertEqual(server.assignmentCount, 1)
+        XCTAssertEqual(server.assignmentCount, 3)
         Datadog.internalFlushAndDeinitialize(instanceName: instanceName)
         let evaluations = try server.evaluations()
         let keys = evaluations.compactMap { $0["flag"] as? [String: Any] }.compactMap { $0["key"] as? String }
         XCTAssertEqual(keys, ["visible-flag"])
         XCTAssertEqual(try server.events(at: "exposures").count, 2)
-        print("Provider pending: assignments=1, exposures=2, evaluation keys=\(keys)")
+        print("Provider pending: assignments=3, exposures=2, evaluation keys=\(keys)")
     }
 
     private func context(_ value: Value) -> MutableContext {
@@ -238,7 +306,7 @@ private final class ProviderLocalIntake {
     private var connections: [NWConnection] = []
     private var received: [URLRequest] = []
     private var onHeldAssignment: (() -> Void)?
-    private var heldAssignments: [NWConnection] = []
+    private var heldAssignments: [(NWConnection, URLRequest)] = []
 
     var requests: [URLRequest] { queue.sync { received } }
     var assignmentCount: Int { requests.filter { $0.url?.path == "/assignments" }.count }
@@ -313,22 +381,35 @@ private final class ProviderLocalIntake {
     func releaseAssignments(status: Int) {
         queue.sync {
             onHeldAssignment = nil
-            for connection in heldAssignments { respond(connection, isAssignment: true, status: status) }
+            for (connection, request) in heldAssignments { respond(connection, request: request, status: status) }
             heldAssignments.removeAll()
         }
     }
 
-    private func respond(_ connection: NWConnection, isAssignment: Bool, status: Int = 200) {
+    private func respond(_ connection: NWConnection, request: URLRequest, status: Int = 200) {
         let assignment: [String: Any] = [
             "allocationKey": "allocation", "variationKey": "enabled", "variationType": "boolean",
             "variationValue": true, "reason": "TARGETING_MATCH", "doLog": true,
         ]
         do {
             let keys = ["local-flag", "initial-flag", "normal-flag", "hidden-flag", "visible-flag", "string-flag", "cached-visible-flag", "cached-hidden-flag"]
-            let flags = Dictionary(uniqueKeysWithValues: keys.map { ($0, assignment) })
-            let body = isAssignment
-                ? try JSONSerialization.data(withJSONObject: ["data": ["attributes": ["flags": flags]]])
-                : Data("{}".utf8)
+            var flags = Dictionary(uniqueKeysWithValues: keys.map { ($0, assignment) })
+            let body: Data
+            if request.url?.path == "/assignments" {
+                let requestJSON = try JSONSerialization.jsonObject(with: XCTUnwrap(request.httpBody)) as? [String: Any]
+                let data = requestJSON?["data"] as? [String: Any]
+                let attributes = data?["attributes"] as? [String: Any]
+                let subject = attributes?["subject"] as? [String: Any]
+                let targetingAttributes = subject?["targeting_attributes"] as? [String: Any]
+                let target = targetingAttributes?["dd_evaluation_telemetry_opt_out"] as? Bool ?? false
+                flags["targeting-flag"] = [
+                    "allocationKey": "targeted-allocation", "variationKey": String(target), "variationType": "boolean",
+                    "variationValue": target, "reason": "TARGETING_MATCH", "doLog": true,
+                ]
+                body = try JSONSerialization.data(withJSONObject: ["data": ["attributes": ["flags": flags]]])
+            } else {
+                body = Data("{}".utf8)
+            }
             let response = "HTTP/1.1 \(status) Response\r\nContent-Type: application/json\r\nContent-Length: \(body.count)\r\nConnection: close\r\n\r\n"
             connection.send(content: Data(response.utf8) + body, completion: .contentProcessed { _ in connection.cancel() })
         } catch {
@@ -365,10 +446,10 @@ private final class ProviderLocalIntake {
                 received.append(request)
                 let isAssignment = request.url?.path == "/assignments"
                 if isAssignment, let onHeldAssignment {
-                    heldAssignments.append(connection)
+                    heldAssignments.append((connection, request))
                     onHeldAssignment()
                 } else {
-                    respond(connection, isAssignment: isAssignment)
+                    respond(connection, request: request)
                 }
             } catch {
                 XCTFail("Local intake could not process request: \(error)")
