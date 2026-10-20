@@ -17,6 +17,48 @@ import DatadogRUM
 /// Uses the actual provider, native client, and URLSession against a loopback HTTP intake.
 final class EvaluationTelemetryLocalIntakeTests: XCTestCase {
     @MainActor
+    func testSubjectSwitchKeepsInstalledSubjectsOptOut() async throws {
+        let ready = expectation(description: "loopback intake ready")
+        let server = try ProviderLocalIntake(ready: ready)
+        server.start()
+        await fulfillment(of: [ready], timeout: 5)
+        defer { server.stop() }
+        let instanceName = "provider-subject-switch-\(UUID().uuidString)"
+        let core = Datadog.initialize(with: .init(clientToken: "local-intake-token", env: "local-test"), trackingConsent: .granted, instanceName: instanceName)
+        defer { Datadog.internalFlushAndDeinitialize(instanceName: instanceName) }
+        RUM.enable(with: .init(applicationID: UUID().uuidString, customEndpoint: try server.url("rum")), in: core)
+        Flags.enable(
+            with: .init(customFlagsEndpoint: try server.url("assignments"), customExposureEndpoint: try server.url("exposures"), customEvaluationEndpoint: try server.url("evaluations")),
+            in: core
+        )
+        let provider = DatadogProvider(enableEvaluationTelemetryOptOutParameter: true, core: core)
+        let api = OpenFeatureAPI()
+        defer { api.clearProvider() }
+        await api.setProviderAndWait(provider: provider, initialContext: context(.boolean(true), subject: "A"))
+        let client = api.getClient()
+        let held = expectation(description: "B refresh held")
+        server.holdAssignments { held.fulfill() }
+        let refresh = Task { await api.setEvaluationContextAndWait(evaluationContext: context(.boolean(false), subject: "B")) }
+        await fulfillment(of: [held], timeout: 5)
+        let monitor = RUMMonitor.shared(in: core)
+        monitor.startView(key: "switch", name: "Switch")
+        XCTAssertTrue(client.getBooleanValue(key: "hidden-flag", defaultValue: false))
+        try XCTUnwrap(core as? DatadogCore).flush()
+        server.releaseAssignments(status: 200)
+        await refresh.value
+        XCTAssertTrue(client.getBooleanValue(key: "visible-flag", defaultValue: false))
+        try XCTUnwrap(core as? DatadogCore).flush()
+        monitor.stopView(key: "switch")
+        Datadog.internalFlushAndDeinitialize(instanceName: instanceName)
+        let keys = try server.evaluations().compactMap { ($0["flag"] as? [String: Any])?["key"] as? String }
+        XCTAssertEqual(keys, ["visible-flag"])
+        XCTAssertEqual(try server.events(at: "exposures").count, 2)
+        let rum = try server.events(at: "rum")
+        XCTAssertFalse(rum.contains { ($0["feature_flags"] as? [String: Any])?["hidden-flag"] != nil })
+        XCTAssertTrue(rum.contains { ($0["feature_flags"] as? [String: Any])?["visible-flag"] != nil })
+    }
+
+    @MainActor
     func testOptOutPreservesExposureAndUnrelatedRUM() async throws {
         try await runLocalIntake(enabled: true, value: .boolean(true))
     }
@@ -283,8 +325,8 @@ final class EvaluationTelemetryLocalIntakeTests: XCTestCase {
         print("Provider pending: assignments=3, exposures=2, evaluation keys=\(keys)")
     }
 
-    private func context(_ value: Value) -> MutableContext {
-        MutableContext(targetingKey: "local-user", structure: MutableStructure(attributes: ["dd_evaluation_telemetry_opt_out": value]))
+    private func context(_ value: Value, subject: String = "local-user") -> MutableContext {
+        MutableContext(targetingKey: subject, structure: MutableStructure(attributes: ["dd_evaluation_telemetry_opt_out": value]))
     }
 }
 
