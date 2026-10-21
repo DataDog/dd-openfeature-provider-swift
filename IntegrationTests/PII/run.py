@@ -133,7 +133,7 @@ def main():
         with tempfile.TemporaryDirectory(prefix="ffl-3433-") as temp:
             root = Path(temp)
             provider = root / "dd-openfeature-provider-swift"
-            shutil.copytree(PROVIDER, provider, ignore=shutil.ignore_patterns(".git", ".build", "pii-evidence"))
+            shutil.copytree(PROVIDER, provider, ignore=shutil.ignore_patterns(".git", ".build", ".pii-sdk", "pii-evidence", "Pods"))
             manifest = provider / "Package.swift"
             source, changed = re.subn(r'\.package\(url: "https://github.com/DataDog/dd-sdk-ios.git", [^\n]+\),',
                                      '.package(path: ' + json.dumps(str(sdk)) + '),', manifest.read_text())

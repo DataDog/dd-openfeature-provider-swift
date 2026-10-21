@@ -7,7 +7,8 @@
 import Testing
 import Foundation
 import OpenFeature
-@_spi(Internal) import DatadogFlags
+@_spi(Internal)
+import DatadogFlags
 import DatadogInternal
 @testable import DatadogOpenFeatureProvider
 

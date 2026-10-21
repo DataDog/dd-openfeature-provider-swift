@@ -5,7 +5,8 @@
  */
 
 import Foundation
-@_spi(Internal) import DatadogFlags
+@_spi(Internal)
+import DatadogFlags
 import OpenFeature
 
 // MARK: - ProviderEvaluation Extensions
@@ -87,7 +88,9 @@ private extension FlagDetails {
     }
 
     var providerErrorCode: ErrorCode? {
-        guard let error else { return nil }
+        guard let error else {
+            return nil
+        }
         switch error {
         case .providerNotReady: return .providerNotReady
         case .flagNotFound: return .flagNotFound

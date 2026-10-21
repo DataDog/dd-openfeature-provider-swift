@@ -5,8 +5,10 @@
  */
 
 import Foundation
-@_spi(Internal) import DatadogCore
-@_spi(Internal) import DatadogFlags
+@_spi(Internal)
+import DatadogCore
+@_spi(Internal)
+import DatadogFlags
 import DatadogOpenFeatureProvider
 import OpenFeature
 

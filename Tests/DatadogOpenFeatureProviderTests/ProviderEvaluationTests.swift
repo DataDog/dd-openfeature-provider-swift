@@ -7,7 +7,8 @@
 import Testing
 import Foundation
 import OpenFeature
-@_spi(Internal) import DatadogFlags
+@_spi(Internal)
+import DatadogFlags
 @testable import DatadogOpenFeatureProvider
 
 // MARK: - ProviderEvaluation Creation Tests

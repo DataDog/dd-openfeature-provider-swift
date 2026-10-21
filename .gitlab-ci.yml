@@ -208,3 +208,31 @@ Publish CP podspecs:
     - mkdir -p "$ARTIFACTS_PATH"
     - git clone --branch "$GIT_TAG" . "$ARTIFACTS_PATH/dd-openfeature-provider-swift"
     - make release-publish-podspecs
+
+# FFL-3433: exercise the exact protected native/provider source artifacts on Xcode 26.
+PII Artifact Validation:
+  stage: test
+  needs: []
+  tags:
+    - macos:sequoia-arm64
+    - specific:true
+  rules:
+    - !reference [.test-pipeline-job, rules]
+  script:
+    - ./tools/runner-setup.sh --xcode "26.0.0" --iOS
+    - make repo-setup ENV=ci
+    - mkdir -p .pii-sdk/dd-sdk-ios
+    - git -C .pii-sdk/dd-sdk-ios init
+    - git -C .pii-sdk/dd-sdk-ios remote add origin https://github.com/DataDog/dd-sdk-ios.git
+    - NATIVE_REF=$(python3 -c 'import json; print(next(p["state"]["revision"] for p in json.load(open("Package.resolved"))["pins"] if p["identity"] == "dd-sdk-ios"))')
+    - git -C .pii-sdk/dd-sdk-ios fetch --depth=1 origin "$NATIVE_REF"
+    - git -C .pii-sdk/dd-sdk-ios checkout --detach FETCH_HEAD
+    - >-
+      PII_SIMULATOR=$(xcrun simctl list devices available --json | python3 -c
+      'import json,sys; print(next(d["udid"] for devices in json.load(sys.stdin)["devices"].values() for d in devices if "iPhone" in d["name"]))')
+    - python3 -B IntegrationTests/PII/run.py --sdk .pii-sdk/dd-sdk-ios --output pii-evidence --cocoapods-destination "platform=iOS Simulator,id=$PII_SIMULATOR"
+  artifacts:
+    when: always
+    paths:
+      - pii-evidence/
+    expire_in: 30 days
