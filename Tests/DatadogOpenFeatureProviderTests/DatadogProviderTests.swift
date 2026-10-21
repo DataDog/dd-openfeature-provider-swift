@@ -7,7 +7,7 @@
 import Testing
 import Foundation
 import OpenFeature
-import DatadogFlags
+@_spi(Internal) import DatadogFlags
 import DatadogInternal
 @testable import DatadogOpenFeatureProvider
 
@@ -131,7 +131,7 @@ internal struct ProviderMetadataTests {
         #expect(result.value == true)
         #expect(result.variant == "on")
         #expect(result.reason == "targeting_match")
-        #expect(result.flagMetadata.isEmpty)
+        #expect(result.flagMetadata["__dd_observe_full_evaluation_data"] == .boolean(false))
     }
 }
 

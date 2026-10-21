@@ -20,7 +20,9 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/open-feature/swift-sdk.git", "0.3.1"..<"0.4.0"),
-        .package(url: "https://github.com/DataDog/dd-sdk-ios.git", from: "3.17.0"),
+        // FFL-3433: review against the exact protected native artifact. Replace with the
+        // first protected release minimum (and matching CocoaPods bound) before publication.
+        .package(url: "https://github.com/DataDog/dd-sdk-ios.git", revision: "24f1067d08e5f952e65209c99fe0fafaa4984488"),
     ],
     targets: [
         .target(
