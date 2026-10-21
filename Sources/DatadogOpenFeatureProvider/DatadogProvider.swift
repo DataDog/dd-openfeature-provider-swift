@@ -15,30 +15,53 @@ public class DatadogProvider: FeatureProvider {
     public let metadata: ProviderMetadata
 
     private let flagsClient: FlagsClientProtocol
+    private let experimentationOptOutMode: FlagsClient.ExperimentationOptOutMode
 
     public init(
         name: String = FlagsClient.defaultName,
         core: DatadogCoreProtocol = CoreRegistry.default
     ) {
         self.flagsClient = FlagsClient.create(name: name, in: core)
+        self.experimentationOptOutMode = .disabled
+        self.metadata = DatadogProviderMetadata()
+    }
+
+    /// Creates a provider with an explicit per-subject experimentation opt-out mode.
+    ///
+    /// In immediate mode, supply an RFC3339 string in `dd_experimentation_opt_out_at`.
+    /// Omit the attribute for subjects who can participate in experimentation.
+    /// This setting does not disable evaluation telemetry.
+    ///
+    /// - Parameters:
+    ///   - experimentationOptOutMode: Whether to honor the subject's opt-out timestamp.
+    ///   - name: The native client name. Use a distinct name for a different mode.
+    ///   - core: The Datadog SDK instance.
+    public init(
+        experimentationOptOutMode: FlagsClient.ExperimentationOptOutMode,
+        name: String = FlagsClient.defaultName,
+        core: DatadogCoreProtocol = CoreRegistry.default
+    ) {
+        self.flagsClient = FlagsClient.create(experimentationOptOutMode: experimentationOptOutMode, name: name, in: core)
+        self.experimentationOptOutMode = experimentationOptOutMode
         self.metadata = DatadogProviderMetadata()
     }
 
     /// Internal initializer for testing purposes only
     internal init(flagsClient: FlagsClientProtocol) {
         self.flagsClient = flagsClient
+        self.experimentationOptOutMode = .disabled
         self.metadata = DatadogProviderMetadata()
     }
 
     public func initialize(initialContext: EvaluationContext?) async throws {
         if let context = initialContext {
-            let ddContext = try FlagsEvaluationContext(context)
+            let ddContext = try FlagsEvaluationContext(context, experimentationOptOutMode: experimentationOptOutMode)
             try await setEvaluationContextAsync(ddContext)
         }
     }
 
     public func onContextSet(oldContext: EvaluationContext?, newContext: EvaluationContext) async throws {
-        let ddContext = try FlagsEvaluationContext(newContext)
+        let ddContext = try FlagsEvaluationContext(newContext, experimentationOptOutMode: experimentationOptOutMode)
         try await setEvaluationContextAsync(ddContext)
     }
 
@@ -49,6 +72,10 @@ public class DatadogProvider: FeatureProvider {
                 case .success:
                     continuation.resume()
                 case .failure(let error):
+                    if case .invalidContext = error {
+                        continuation.resume(throwing: OpenFeatureError.invalidContextError)
+                        return
+                    }
                     // Reading `state.currentState` here relies on a load-bearing ordering
                     // guarantee: upstream `FlagsRepository.setEvaluationContext` updates the
                     // state (to `.stale` or `.error`) *before* invoking this failure
@@ -74,29 +101,40 @@ public class DatadogProvider: FeatureProvider {
 
     public func getBooleanEvaluation(key: String, defaultValue: Bool, context: EvaluationContext?) throws -> ProviderEvaluation<Bool> {
         let details = flagsClient.getBooleanDetails(key: key, defaultValue: defaultValue)
+        try validateContext(details)
         return ProviderEvaluation(details)
     }
 
     public func getStringEvaluation(key: String, defaultValue: String, context: EvaluationContext?) throws -> ProviderEvaluation<String> {
         let details = flagsClient.getStringDetails(key: key, defaultValue: defaultValue)
+        try validateContext(details)
         return ProviderEvaluation(details)
     }
 
     public func getIntegerEvaluation(key: String, defaultValue: Int64, context: EvaluationContext?) throws -> ProviderEvaluation<Int64> {
         let intValue = Int(defaultValue)
         let details = flagsClient.getIntegerDetails(key: key, defaultValue: intValue)
+        try validateContext(details)
         return ProviderEvaluation(details)
     }
 
     public func getDoubleEvaluation(key: String, defaultValue: Double, context: EvaluationContext?) throws -> ProviderEvaluation<Double> {
         let details = flagsClient.getDoubleDetails(key: key, defaultValue: defaultValue)
+        try validateContext(details)
         return ProviderEvaluation(details)
     }
 
     public func getObjectEvaluation(key: String, defaultValue: Value, context: EvaluationContext?) throws -> ProviderEvaluation<Value> {
         let defaultAnyValue = try AnyValue(defaultValue)
         let details = flagsClient.getObjectDetails(key: key, defaultValue: defaultAnyValue)
+        try validateContext(details)
         return ProviderEvaluation(details)
+    }
+
+    private func validateContext<T>(_ details: FlagDetails<T>) throws {
+        if details.error == .invalidContext {
+            throw OpenFeatureError.invalidContextError
+        }
     }
 }
 

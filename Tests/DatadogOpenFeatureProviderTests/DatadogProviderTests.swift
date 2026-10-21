@@ -137,6 +137,22 @@ internal struct ProviderMetadataTests {
 
 @Suite("DatadogProvider Context Management")
 internal struct ContextManagementTests {
+    @Test("Invalid context does not fall back to stale assignments")
+    func invalidContextDoesNotFallBackToStaleAssignments() async throws {
+        let mockFlagsClient = DatadogFlagsClientMock()
+        mockFlagsClient.setEvaluationContextResult = .failure(.invalidContext)
+        mockFlagsClient.mockStateManager.simulateStateChange(.stale)
+        let provider = DatadogProvider(flagsClient: mockFlagsClient)
+        let context = MutableContext(targetingKey: "subject")
+
+        await #expect(throws: OpenFeatureError.invalidContextError) {
+            try await provider.initialize(initialContext: context)
+        }
+        await #expect(throws: OpenFeatureError.invalidContextError) {
+            try await provider.onContextSet(oldContext: nil, newContext: context)
+        }
+    }
+
     @Test("Provider initialization with context")
     func providerInitializationWithContext() async throws {
         // Given

@@ -84,6 +84,37 @@ let client = OpenFeatureAPI.shared.getClient()
 let flagValue = client.getBooleanValue(key: "my-feature-flag", defaultValue: false)
 ```
 
+### Per-subject experimentation opt-out
+
+Enable immediate exclusion when creating the provider:
+
+```swift
+let provider = DatadogProvider(experimentationOptOutMode: .immediate)
+var attributes: [String: Value] = [:]
+if let optedOutAt = user.experimentationOptOutAt {
+    attributes["dd_experimentation_opt_out_at"] = .string(
+        ISO8601DateFormatter().string(from: optedOutAt)
+    )
+}
+let context = MutableContext(
+    targetingKey: user.id,
+    structure: MutableStructure(attributes: attributes)
+)
+await OpenFeatureAPI.shared.setProviderAndWait(provider: provider, initialContext: context)
+let enabled = OpenFeatureAPI.shared.getClient().getBooleanValue(key: "new-feature", defaultValue: false)
+```
+
+The application supplies the opt-out time as an RFC3339 string. Omit the attribute for subjects who can participate.
+Any valid timestamp takes effect immediately, including a future timestamp. It does not schedule exclusion.
+The edge skips experiment allocations and continues through ordinary feature allocations. If none match, evaluation returns the application's default.
+
+The native client requires the edge to acknowledge opt-out. It does not reuse eligible assignments when that acknowledgement is missing.
+Invalid timestamps also prevent reuse and return defaults. Direct provider calls throw `OpenFeatureError.invalidContextError`.
+OpenFeature Swift 0.3.1 reports `GENERAL` from its client while the provider is in the error state.
+
+The default mode is `.disabled`, which ignores this attribute. Use a separate client name for each mode; a named native client keeps its initial configuration.
+This control does not disable evaluation telemetry. Immediate withdrawal can change an enrolled subject's experience; account for that change in analysis.
+
 ## Contributing
 
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines and [DEVELOPMENT.md](DEVELOPMENT.md) for detailed setup instructions, testing guidelines, and development workflow.

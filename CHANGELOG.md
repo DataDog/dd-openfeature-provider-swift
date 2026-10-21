@@ -1,5 +1,7 @@
 # Unreleased
 
+- [FEATURE] Add immediate per-subject experimentation opt-out through `DatadogProvider(experimentationOptOutMode: .immediate)`.
+
 # 0.3.0 / 2026-10-08
 
 - [CHANGED] Require Datadog SDK `>= 3.17.0, < 4.0.0` in Swift Package Manager and CocoaPods.
