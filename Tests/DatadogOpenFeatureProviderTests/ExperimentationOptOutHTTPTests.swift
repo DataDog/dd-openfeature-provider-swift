@@ -25,7 +25,7 @@ final class ExperimentationOptOutHTTPTests: XCTestCase {
                 XCTAssertEqual(result.variant, "ordinary")
                 XCTAssertNil(result.errorCode)
                 let attributes = try self.attributes(in: XCTUnwrap(endpoint.requests.last))
-                XCTAssertEqual((attributes["evaluation_options"] as? [String: Any])?["experimentation_opt_out"] as? Bool, true)
+                XCTAssertEqual((attributes["evaluation_options"] as? [String: Any])?["experimentation_opt_out_mode"] as? String, "immediate")
                 let subject = try XCTUnwrap(attributes["subject"] as? [String: Any])
                 XCTAssertEqual(subject["targeting_key"] as? String, "subject")
                 XCTAssertEqual((subject["targeting_attributes"] as? [String: Any])?["dd_experimentation_opt_out_at"] as? String, timestamp)
@@ -35,23 +35,61 @@ final class ExperimentationOptOutHTTPTests: XCTestCase {
 
     @MainActor
     func testDisabledAndAbsentAttributeKeepOrdinaryEvaluation() async throws {
-        for mode: FlagsClient.ExperimentationOptOutMode? in [nil, .disabled, .immediate] {
+        for mode: FlagsClient.ExperimentationOptOutMode? in [nil, .disabled, .immediate, .futureExperimentsOnly] {
             try await withProvider(mode: mode) { provider, api, endpoint in
-                let value: Value? = mode == .immediate ? nil : .boolean(true)
+                let value: Value? = mode == .immediate || mode == .futureExperimentsOnly ? nil : .boolean(true)
                 await api.setProviderAndWait(provider: provider, initialContext: self.context(value))
                 let result = api.getClient().getBooleanDetails(key: "feature", defaultValue: false)
                 XCTAssertTrue(result.value)
                 XCTAssertEqual(result.variant, "treatment")
                 XCTAssertNil(result.errorCode)
                 let attributes = try self.attributes(in: XCTUnwrap(endpoint.requests.last))
-                XCTAssertNotEqual((attributes["evaluation_options"] as? [String: Any])?["experimentation_opt_out"] as? Bool, true)
+                XCTAssertNil(attributes["evaluation_options"])
             }
         }
     }
 
     @MainActor
+    func testFutureModePreservesExactCutoffAndRequiresAcknowledgement() async throws {
+        try await withProvider(mode: .futureExperimentsOnly) { provider, api, endpoint in
+            let cutoff = "2026-10-21T12:00:00.123456789123+02:00"
+            endpoint.futureAcknowledgement = "2026-10-21T10:00:00.123456789Z"
+            await api.setProviderAndWait(provider: provider, initialContext: self.context(.string(cutoff)))
+            let result = api.getClient().getBooleanDetails(key: "feature", defaultValue: true)
+            XCTAssertEqual(result.variant, "ordinary")
+            XCTAssertFalse(result.value)
+            XCTAssertNil(result.errorCode)
+            let attributes = try self.attributes(in: XCTUnwrap(endpoint.requests.last))
+            XCTAssertEqual((attributes["evaluation_options"] as? [String: Any])?["experimentation_opt_out_mode"] as? String, "future_experiments_only")
+            let subject = try XCTUnwrap(attributes["subject"] as? [String: Any])
+            XCTAssertEqual((subject["targeting_attributes"] as? [String: Any])?["dd_experimentation_opt_out_at"] as? String, cutoff)
+
+            // The new context differs by one nanosecond. A stale acknowledgement must not match.
+            await api.setEvaluationContextAndWait(evaluationContext: self.context(.string("2026-10-21T10:00:00.123456788Z")))
+            let rejected = api.getClient().getBooleanDetails(key: "feature", defaultValue: true)
+            XCTAssertTrue(rejected.value)
+            XCTAssertNil(rejected.variant)
+            XCTAssertNotNil(rejected.errorCode)
+
+            endpoint.acknowledgesOptOut = false
+            await api.setEvaluationContextAndWait(evaluationContext: self.context(.string("2026-10-21T10:00:00.123456787Z")))
+            XCTAssertNil(api.getClient().getBooleanDetails(key: "feature", defaultValue: true).variant)
+        }
+    }
+
+    @MainActor
     func testInvalidValuesClearPriorAssignmentsWithoutHTTP() async throws {
-        try await withProvider(mode: .immediate) { provider, api, endpoint in
+        try await checkInvalidValuesClearPriorAssignmentsWithoutHTTP(mode: .immediate)
+    }
+
+    @MainActor
+    func testFutureInvalidValuesClearPriorAssignmentsWithoutHTTP() async throws {
+        try await checkInvalidValuesClearPriorAssignmentsWithoutHTTP(mode: .futureExperimentsOnly)
+    }
+
+    @MainActor
+    private func checkInvalidValuesClearPriorAssignmentsWithoutHTTP(mode: FlagsClient.ExperimentationOptOutMode) async throws {
+        try await withProvider(mode: mode) { provider, api, endpoint in
             await api.setProviderAndWait(provider: provider, initialContext: self.context(nil))
             XCTAssertTrue(api.getClient().getBooleanValue(key: "feature", defaultValue: false))
             let invalidValues: [Value] = [.null, .boolean(true), .integer(1), .string(""), .string("invalid"), .date(Date())]
@@ -139,11 +177,16 @@ private final class OptOutEndpoint {
     private var connections: [NWConnection] = []
     private var received: [[String: Any]] = []
     private var acknowledgement = true
+    private var futureCutoff: String?
 
     var requests: [[String: Any]] { queue.sync { received } }
     var acknowledgesOptOut: Bool {
         get { queue.sync { acknowledgement } }
         set { queue.sync { acknowledgement = newValue } }
+    }
+    var futureAcknowledgement: String? {
+        get { queue.sync { futureCutoff } }
+        set { queue.sync { futureCutoff = newValue } }
     }
 
     init(ready: XCTestExpectation) throws {
@@ -204,7 +247,15 @@ private final class OptOutEndpoint {
                 let request = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
                 received.append(request)
                 let attributes = (request["data"] as? [String: Any])?["attributes"] as? [String: Any]
-                let optedOut = acknowledgement && (attributes?["evaluation_options"] as? [String: Any])?["experimentation_opt_out"] as? Bool == true
+                let mode = (attributes?["evaluation_options"] as? [String: Any])?["experimentation_opt_out_mode"] as? String
+                let optedOut = acknowledgement && (mode == "immediate" || mode == "future_experiments_only")
+                var options: [String: Any] = [:]
+                if acknowledgement, mode == "immediate" {
+                    options["experimentation_opt_out"] = true
+                } else if acknowledgement, mode == "future_experiments_only" {
+                    options["experimentation_opt_out_mode"] = mode
+                    options["dd_experimentation_opt_out_at"] = futureCutoff
+                }
                 let assignment: [String: Any] = [
                     "allocationKey": optedOut ? "ordinary" : "experiment",
                     "variationKey": optedOut ? "ordinary" : "treatment",
@@ -215,7 +266,7 @@ private final class OptOutEndpoint {
                     "data": [
                         "attributes": [
                             "flags": ["feature": assignment],
-                            "evaluation_options": ["experimentation_opt_out": optedOut],
+                            "evaluation_options": options,
                         ],
                     ],
                 ])

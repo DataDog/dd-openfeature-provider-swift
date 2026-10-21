@@ -24,7 +24,7 @@ extension FlagsEvaluationContext {
             // Convert OpenFeature Value to DatadogFlags AnyValue, preserving original types
             do {
                 attributes[key] = try AnyValue(value)
-            } catch where experimentationOptOutMode == .immediate && key == "dd_experimentation_opt_out_at" {
+            } catch where experimentationOptOutMode != .disabled && key == "dd_experimentation_opt_out_at" {
                 // Dates and nested dates cannot be represented by AnyValue. Pass an invalid
                 // value to the native client so it also invalidates previous assignments.
                 attributes[key] = .null

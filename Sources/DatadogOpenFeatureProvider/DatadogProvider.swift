@@ -28,7 +28,8 @@ public class DatadogProvider: FeatureProvider {
 
     /// Creates a provider with an explicit per-subject experimentation opt-out mode.
     ///
-    /// In immediate mode, supply an RFC3339 string in `dd_experimentation_opt_out_at`.
+    /// In either enabled mode, supply an RFC3339 string in `dd_experimentation_opt_out_at`.
+    /// Future-experiments-only mode keeps allocations activated before that time available.
     /// Omit the attribute for subjects who can participate in experimentation.
     /// This setting does not disable evaluation telemetry.
     ///

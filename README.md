@@ -86,7 +86,7 @@ let flagValue = client.getBooleanValue(key: "my-feature-flag", defaultValue: fal
 
 ### Per-subject experimentation opt-out
 
-Enable immediate exclusion when creating the provider:
+Select an opt-out mode when creating the provider:
 
 ```swift
 let provider = DatadogProvider(experimentationOptOutMode: .immediate)
@@ -105,15 +105,24 @@ let enabled = OpenFeatureAPI.shared.getClient().getBooleanValue(key: "new-featur
 ```
 
 The application supplies the opt-out time as an RFC3339 string. Omit the attribute for subjects who can participate.
-Any valid timestamp takes effect immediately, including a future timestamp. It does not schedule exclusion.
-The edge skips experiment allocations and continues through ordinary feature allocations. If none match, evaluation returns the application's default.
+
+| Mode | Behavior when the subject has an opt-out timestamp |
+| --- | --- |
+| `.disabled` | Ignore the timestamp. This is the default. |
+| `.immediate` | Skip all experiment allocations, including experiments already in progress. |
+| `.futureExperimentsOnly` | Skip experiment allocations activated at or after the timestamp, or with an unknown activation time. |
+
+A future timestamp does not schedule exclusion. The edge continues through remaining allocations. If none match, evaluation returns the application's default.
+Future-experiments-only mode keeps older allocations available. It does not prove prior enrollment or preserve a previous assignment.
 
 The native client requires the edge to acknowledge opt-out. It does not reuse eligible assignments when that acknowledgement is missing.
+Future mode also requires the same cutoff instant, compared at nanosecond precision. Cached assignments must match the mode, cutoff, and context.
 Invalid timestamps also prevent reuse and return defaults. Direct provider calls throw `OpenFeatureError.invalidContextError`.
 OpenFeature Swift 0.3.1 reports `GENERAL` from its client while the provider is in the error state.
 
 The default mode is `.disabled`, which ignores this attribute. Use a separate client name for each mode; a named native client keeps its initial configuration.
 This control does not disable evaluation telemetry. Immediate withdrawal can change an enrolled subject's experience; account for that change in analysis.
+Older allocations retained by future mode still produce normal exposures. No withdrawal event is added.
 
 ## Contributing
 
