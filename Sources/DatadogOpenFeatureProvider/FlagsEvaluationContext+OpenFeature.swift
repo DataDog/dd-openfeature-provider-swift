@@ -13,13 +13,22 @@ import OpenFeature
 extension FlagsEvaluationContext {
     /// Creates DatadogFlags context from OpenFeature EvaluationContext
     /// Preserves original attribute types when converting from OpenFeature Value to AnyValue
-    init(_ context: EvaluationContext) throws {
+    init(
+        _ context: EvaluationContext,
+        experimentationOptOutMode: FlagsClient.ExperimentationOptOutMode = .disabled
+    ) throws {
         let targetingKey = context.getTargetingKey()
 
         var attributes: [String: AnyValue] = [:]
         for (key, value) in context.asMap() {
             // Convert OpenFeature Value to DatadogFlags AnyValue, preserving original types
-            attributes[key] = try AnyValue(value)
+            do {
+                attributes[key] = try AnyValue(value)
+            } catch where experimentationOptOutMode != .disabled && key == "dd_experimentation_opt_out_at" {
+                // Dates and nested dates cannot be represented by AnyValue. Pass an invalid
+                // value to the native client so it also invalidates previous assignments.
+                attributes[key] = .null
+            }
         }
 
         self.init(targetingKey: targetingKey, attributes: attributes)
