@@ -49,6 +49,11 @@ struct PrivacyWireProbe {
             }
         }
 
+        func stop() {
+            Datadog.flush(instanceName: instance)
+            Datadog.stopInstance(named: instance)
+        }
+
         let direct = start()
         let core = Datadog.sdkInstance(named: instance)
         for state in ["absent", "false", "null", "wrong", "true"] {
@@ -87,7 +92,7 @@ struct PrivacyWireProbe {
         // The endpoint fails its first upload to exercise the existing persisted retry path.
         Datadog.flush(instanceName: instance)
         Datadog.flush(instanceName: instance)
-        Datadog.flushAndDeinitialize(instanceName: instance)
+        stop()
 
         // Restore the final protected configuration from disk while the endpoint is offline.
         try await control("false", offline: true)
@@ -102,7 +107,7 @@ struct PrivacyWireProbe {
         let offlineOF = api.getClient().getBooleanDetails(key: "bool-false", defaultValue: false)
         precondition(offlineOF.value)
         precondition(offlineOF.flagMetadata["__dd_observe_full_evaluation_data"] == .boolean(false))
-        Datadog.flushAndDeinitialize(instanceName: instance)
+        stop()
 
         // Tracking disable wins, including calls routed through OpenFeature.
         try await control("disabled")
@@ -111,7 +116,7 @@ struct PrivacyWireProbe {
         await api.setProviderAndWait(provider: DatadogProvider(name: "disabled", core: Datadog.sdkInstance(named: instance)), initialContext: ofContext)
         precondition(disabled.getBooleanValue(key: "bool-disabled", defaultValue: false))
         precondition(api.getClient().getBooleanValue(key: "bool-disabled", defaultValue: false))
-        Datadog.flushAndDeinitialize(instanceName: instance)
+        stop()
         api.clearProvider()
     }
 }
