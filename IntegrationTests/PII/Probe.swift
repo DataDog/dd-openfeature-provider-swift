@@ -38,7 +38,7 @@ struct PrivacyWireProbe {
                 trackExposures: false,
                 customEvaluationEndpoint: base.appendingPathComponent("evaluations"),
                 trackEvaluations: tracking,
-                evaluationFlushInterval: 60
+                evaluationFlushInterval: 1
             ), in: core)
             return FlagsClient.create(name: "direct", in: core)
         }
@@ -89,9 +89,19 @@ struct PrivacyWireProbe {
             try await refresh(direct)
             await api.setEvaluationContextAndWait(evaluationContext: ofContext)
         }
-        // The endpoint fails its first upload to exercise the existing persisted retry path.
-        Datadog.flush(instanceName: instance)
-        Datadog.flush(instanceName: instance)
+        // Let the normal uploader retry the first HTTP 500. Manual flush is a one-shot
+        // upload and intentionally does not exercise the SDK's scheduled retry policy.
+        var uploaded = false
+        for _ in 0..<600 {
+            let (data, _) = try await URLSession.shared.data(from: base.appendingPathComponent("status"))
+            let status = try JSONSerialization.jsonObject(with: data) as! [String: Int]
+            if status["evaluation_count"] == 70 {
+                uploaded = true
+                break
+            }
+            try await Task.sleep(nanoseconds: 100_000_000)
+        }
+        precondition(uploaded, "Normal uploader did not deliver all 70 evaluations after retry")
         stop()
 
         // Restore the final protected configuration from disk while the endpoint is offline.

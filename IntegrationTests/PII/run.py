@@ -34,6 +34,17 @@ class Intake(BaseHTTPRequestHandler):
     def log_message(self, *_args):
         pass
 
+    def do_GET(self):
+        cls = type(self)
+        with cls.lock:
+            count = sum(event["evaluation_count"] for batch in cls.accepted for event in batch["flagEvaluations"])
+        encoded = json.dumps({"evaluation_count": count}).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(encoded)))
+        self.end_headers()
+        self.wfile.write(encoded)
+
     def do_POST(self):
         body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))))
         cls = type(self)
@@ -73,10 +84,10 @@ class Intake(BaseHTTPRequestHandler):
             self.wfile.write(encoded)
 
 
-def verify_wire(accepted, assignments):
+def verify_wire(accepted, assignments, attempts=None):
     events = [event for batch in accepted for event in batch["flagEvaluations"]]
     counts = {}
-    for event in events:
+    for event in events + [event for batch in (attempts or []) for event in batch["flagEvaluations"]]:
         key = event["flag"]["key"]
         state = key.rsplit("-", 1)[1]
         assert state in ["absent", "false", "null", "wrong", "true"], event
@@ -92,6 +103,9 @@ def verify_wire(accepted, assignments):
         assert (code == "FLAG_NOT_FOUND") == key.startswith("missing-"), event
         if code:
             assert event["runtime_default_used"] is True, event
+    for event in events:
+        key = event["flag"]["key"]
+        code = event.get("error", {}).get("message")
         counts[(key, code)] = counts.get((key, code), 0) + event["evaluation_count"]
     expected = {}
     for state in ["absent", "false", "null", "wrong", "true"]:
@@ -159,6 +173,7 @@ let package = Package(name: "PrivacyProbe", platforms: [.macOS("12.6")], depende
             with (output / "build-and-run.log").open("w") as log:
                 def run(command, cwd=None):
                     evidence["commands"].append(command)
+                    print("Running:", command, flush=True)
                     subprocess.run(command, check=True, stdout=log, stderr=subprocess.STDOUT, env=env, cwd=cwd, timeout=1800)
                 run(["xcodebuild", "-version"])
                 run(["swift", "test", "--package-path", str(provider)])
@@ -167,6 +182,8 @@ let package = Package(name: "PrivacyProbe", platforms: [.macOS("12.6")], depende
                 evidence["binary_sha256"] = hashlib.sha256(binary.read_bytes()).hexdigest()
                 shutil.copy2(probe / "Package.resolved", output / "Package.resolved")
                 run([str(binary)])
+                assert len(Intake.attempts) >= 2, "Retry was not exercised"
+                evidence["assertions"] = verify_wire(Intake.accepted, Intake.assignments, Intake.attempts)
                 evidence["cocoapods"] = "not run"
                 if args.cocoapods_destination:
                     smoke = provider / "SmokeTests" / "cocoapods"
@@ -184,8 +201,6 @@ let package = Package(name: "PrivacyProbe", platforms: [.macOS("12.6")], depende
                         run(["xcodebuild", "test", "-workspace", str(smoke / "CPProject.xcworkspace"),
                              "-scheme", scheme, "-destination", args.cocoapods_destination], cwd=smoke)
                     evidence["cocoapods"] = "passed: OpenFeature 0.3.0, local native/provider, static and dynamic iOS"
-            assert len(Intake.attempts) >= 2, "Retry was not exercised"
-            evidence["assertions"] = verify_wire(Intake.accepted, Intake.assignments)
             evidence["result"] = "passed"
     finally:
         server.shutdown()
