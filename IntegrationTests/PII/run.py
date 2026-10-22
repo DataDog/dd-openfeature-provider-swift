@@ -5,6 +5,7 @@
 
 """Build local SDK/provider artifacts and assert their actual loopback HTTP payloads on macOS."""
 import argparse
+import copy
 import hashlib
 import json
 import os
@@ -84,6 +85,28 @@ class Intake(BaseHTTPRequestHandler):
             self.wfile.write(encoded)
 
 
+def reset_intake():
+    with Intake.lock:
+        Intake.state, Intake.offline = "absent", False
+        Intake.attempts, Intake.accepted, Intake.assignments = [], [], []
+
+
+def captured_wire():
+    with Intake.lock:
+        return copy.deepcopy({"attempts": Intake.attempts, "accepted": Intake.accepted,
+                              "assignments": Intake.assignments})
+
+
+def ios_test_source(base_url):
+    source = (HERE / "Probe.swift").read_text()
+    assert source.count("@main\n") == 1
+    source = source.replace("@main\n", "", 1)
+    variable = 'ProcessInfo.processInfo.environment["FFL_PII_URL"]!'
+    assert source.count(variable) == 1
+    source = source.replace(variable, json.dumps(base_url), 1)
+    return source + "\n" + (HERE / "IOSAppTests.swift").read_text()
+
+
 def verify_wire(accepted, assignments, attempts=None):
     events = [event for batch in accepted for event in batch["flagEvaluations"]]
     counts = {}
@@ -134,7 +157,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--sdk", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--cocoapods-destination", help="Also test both CocoaPods linkages at this xcodebuild destination")
+    parser.add_argument("--cocoapods-destination", help="Run the wire probe inside both CocoaPods iOS apps at this xcodebuild destination")
     args = parser.parse_args()
     if platform.system() != "Darwin":
         parser.error("Requires macOS and Xcode/Swift 6.2; Linux cannot build the Apple SDK artifacts")
@@ -143,6 +166,18 @@ def main():
     evidence = {"sdk": identity(sdk), "provider": identity(PROVIDER), "commands": []}
     server = ThreadingHTTPServer(("127.0.0.1", 0), Intake)
     threading.Thread(target=server.serve_forever, daemon=True).start()
+    active_run = "macos"
+
+    def save_wire():
+        wire = captured_wire()
+        (output / ("wire-" + active_run + ".json")).write_text(json.dumps(wire, indent=2))
+        return wire
+
+    def verify_run():
+        wire = save_wire()
+        assert len(wire["attempts"]) >= 2, "Retry was not exercised"
+        return verify_wire(wire["accepted"], wire["assignments"], wire["attempts"])
+
     try:
         with tempfile.TemporaryDirectory(prefix="ffl-3433-") as temp:
             root = Path(temp)
@@ -182,8 +217,7 @@ let package = Package(name: "PrivacyProbe", platforms: [.macOS("12.6")], depende
                 evidence["binary_sha256"] = hashlib.sha256(binary.read_bytes()).hexdigest()
                 shutil.copy2(probe / "Package.resolved", output / "Package.resolved")
                 run([str(binary)])
-                assert len(Intake.attempts) >= 2, "Retry was not exercised"
-                evidence["assertions"] = verify_wire(Intake.accepted, Intake.assignments, Intake.attempts)
+                evidence["assertions"] = verify_run()
                 evidence["cocoapods"] = "not run"
                 if args.cocoapods_destination:
                     smoke = provider / "SmokeTests" / "cocoapods"
@@ -197,15 +231,33 @@ let package = Package(name: "PrivacyProbe", platforms: [.macOS("12.6")], depende
                     env["BUNDLE_GEMFILE"] = str(provider / "Gemfile")
                     run(["bundle", "exec", "pod", "install"], cwd=smoke)
                     shutil.copy2(smoke / "Podfile.lock", output / "Podfile.lock")
-                    for scheme in ["App Dynamic iOS", "App Static iOS"]:
+                    # These targets have TEST_HOST=App.app/App: the shared probe executes
+                    # inside the existing UIKit app, linked to the real local pod artifacts.
+                    (smoke / "AppTests" / "CPProjectTests.swift").write_text(ios_test_source(env["FFL_PII_URL"]))
+                    evidence["ios_apps"] = {}
+                    for linkage in ["dynamic", "static"]:
+                        active_run = "ios-" + linkage
+                        reset_intake()
+                        scheme = "App " + linkage.title() + " iOS"
+                        derived = root / ("derived-" + linkage)
+                        result_bundle = output / (active_run + ".xcresult")
                         run(["xcodebuild", "test", "-workspace", str(smoke / "CPProject.xcworkspace"),
-                             "-scheme", scheme, "-destination", args.cocoapods_destination], cwd=smoke)
-                    evidence["cocoapods"] = "passed: OpenFeature 0.3.0, local native/provider, static and dynamic iOS"
+                             "-scheme", scheme, "-destination", args.cocoapods_destination,
+                             "-derivedDataPath", str(derived), "-resultBundlePath", str(result_bundle)], cwd=smoke)
+                        assertions = verify_run()
+                        app = derived / "Build" / "Products" / "Debug-iphonesimulator" / "App.app"
+                        binaries = [app / "App"]
+                        binaries += [p / p.stem for p in app.rglob("*.framework") if (p / p.stem).is_file()]
+                        binaries += [p / p.stem for p in app.rglob("*.xctest") if (p / p.stem).is_file()]
+                        evidence["ios_apps"][linkage] = {
+                            "result": "passed", "assertions": assertions, "destination": args.cocoapods_destination,
+                            "binary_sha256": {str(p.relative_to(app)): hashlib.sha256(p.read_bytes()).hexdigest() for p in binaries}
+                        }
+                    evidence["cocoapods"] = "passed: OpenFeature 0.3.0, local native/provider, static and dynamic iOS app wire probes"
             evidence["result"] = "passed"
     finally:
         server.shutdown()
-        (output / "wire.json").write_text(json.dumps({"attempts": Intake.attempts, "accepted": Intake.accepted,
-                                                     "assignments": Intake.assignments}, indent=2))
+        save_wire()
         (output / "evidence.json").write_text(json.dumps(evidence, indent=2))
     print(json.dumps(evidence["assertions"], indent=2))
 
