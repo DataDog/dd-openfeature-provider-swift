@@ -7,6 +7,7 @@
 import Testing
 import Foundation
 import OpenFeature
+@_spi(Internal)
 import DatadogFlags
 @testable import DatadogOpenFeatureProvider
 
@@ -32,7 +33,7 @@ internal struct BasicProviderEvaluationTests {
         #expect(evaluation.value == true)
         #expect(evaluation.variant == "enabled")
         #expect(evaluation.reason == "targeting_match")
-        #expect(evaluation.flagMetadata.isEmpty)
+        #expect(evaluation.flagMetadata["__dd_observe_full_evaluation_data"] == .boolean(false))
     }
 
     @Test("String evaluation creation")
@@ -50,7 +51,7 @@ internal struct BasicProviderEvaluationTests {
         #expect(evaluation.value == "feature-enabled")
         #expect(evaluation.variant == "variation-a")
         #expect(evaluation.reason == "rule_match")
-        #expect(evaluation.flagMetadata.isEmpty)
+        #expect(evaluation.flagMetadata["__dd_observe_full_evaluation_data"] == .boolean(false))
     }
 
     @Test("Double evaluation creation")
@@ -68,7 +69,7 @@ internal struct BasicProviderEvaluationTests {
         #expect(evaluation.value == 42.5)
         #expect(evaluation.variant == "high")
         #expect(evaluation.reason == "percentage_rollout")
-        #expect(evaluation.flagMetadata.isEmpty)
+        #expect(evaluation.flagMetadata["__dd_observe_full_evaluation_data"] == .boolean(false))
     }
 
     @Test("Integer evaluation creation")
@@ -86,7 +87,7 @@ internal struct BasicProviderEvaluationTests {
         #expect(evaluation.value == Int64(1_000))
         #expect(evaluation.variant == "large")
         #expect(evaluation.reason == "default")
-        #expect(evaluation.flagMetadata.isEmpty)
+        #expect(evaluation.flagMetadata["__dd_observe_full_evaluation_data"] == .boolean(false))
     }
 
     @Test("Large integer conversion")
@@ -104,7 +105,7 @@ internal struct BasicProviderEvaluationTests {
         #expect(evaluation.value == Int64(Int.max))
         #expect(evaluation.variant == "maximum")
         #expect(evaluation.reason == "boundary_test")
-        #expect(evaluation.flagMetadata.isEmpty)
+        #expect(evaluation.flagMetadata["__dd_observe_full_evaluation_data"] == .boolean(false))
     }
 }
 
@@ -138,7 +139,7 @@ internal struct ComplexValueEvaluationTests {
 
         #expect(evaluation.variant == "complex-config")
         #expect(evaluation.reason == "experiment")
-        #expect(evaluation.flagMetadata.isEmpty)
+        #expect(evaluation.flagMetadata["__dd_observe_full_evaluation_data"] == .boolean(false))
     }
 
     @Test("Complex nested object evaluation")
@@ -203,7 +204,7 @@ internal struct ComplexValueEvaluationTests {
 
         #expect(evaluation.variant == "full-config")
         #expect(evaluation.reason == "admin_override")
-        #expect(evaluation.flagMetadata.isEmpty)
+        #expect(evaluation.flagMetadata["__dd_observe_full_evaluation_data"] == .boolean(false))
     }
 }
 
@@ -224,8 +225,8 @@ internal struct ProviderEvaluationMetadataTests {
         #expect(evaluation.flagMetadata["allocationKey"] == FlagMetadataValue.string("alloc-abc"))
     }
 
-    @Test("Empty metadata produces empty flagMetadata")
-    func emptyMetadataProducesEmptyFlagMetadata() async throws {
+    @Test("Missing allocation still carries protected consent")
+    func missingAllocationCarriesProtectedConsent() async throws {
         let flagDetails = FlagDetails<Bool>(
             key: "test-flag",
             value: true,
@@ -235,7 +236,7 @@ internal struct ProviderEvaluationMetadataTests {
 
         let evaluation = ProviderEvaluation(flagDetails)
 
-        #expect(evaluation.flagMetadata.isEmpty)
+        #expect(evaluation.flagMetadata["__dd_observe_full_evaluation_data"] == .boolean(false))
     }
 }
 
@@ -256,7 +257,7 @@ internal struct ProviderEvaluationEdgeCaseTests {
         #expect(evaluation.value == false)
         #expect(evaluation.variant == nil)
         #expect(evaluation.reason == nil)
-        #expect(evaluation.flagMetadata.isEmpty)
+        #expect(evaluation.flagMetadata["__dd_observe_full_evaluation_data"] == .boolean(false))
     }
 
     @Test("Evaluation with context")
@@ -284,6 +285,34 @@ internal struct ProviderEvaluationEdgeCaseTests {
         #expect(evaluation.value == "enabled")
         #expect(evaluation.variant == "premium-variant")
         #expect(evaluation.reason == "user_segment")
-        #expect(evaluation.flagMetadata.isEmpty)
+        #expect(evaluation.flagMetadata["__dd_observe_full_evaluation_data"] == .boolean(false))
+    }
+}
+
+@Suite("Evaluation-time privacy metadata")
+internal struct EvaluationPrivacyMetadataTests {
+    @Test("Consent and native errors survive every result type", arguments: [false, true])
+    func consentAndErrors(consent: Bool) {
+        let cases: [(FlagEvaluationError?, ErrorCode?)] = [
+            (nil, nil), (.providerNotReady, .providerNotReady), (.flagNotFound, .flagNotFound), (.typeMismatch, .typeMismatch)
+        ]
+        for (error, code) in cases {
+            func details<T: Equatable>(_ value: T) -> FlagDetails<T> {
+                var result = FlagDetails(key: "flag", value: value, error: error, allocationKey: "allocation")
+                result.observeFullEvaluationData = consent
+                return result
+            }
+            func check<T>(_ result: ProviderEvaluation<T>) {
+                #expect(result.flagMetadata["__dd_observe_full_evaluation_data"] == .boolean(consent))
+                #expect(result.flagMetadata["allocationKey"] == .string("allocation"))
+                #expect(result.errorCode == code)
+                #expect(result.errorMessage == nil)
+            }
+            check(ProviderEvaluation(details(true)))
+            check(ProviderEvaluation(details("value")))
+            check(ProviderEvaluation(details(1.5)))
+            check(ProviderEvaluation<Int64>(details(1)))
+            check(ProviderEvaluation<Value>(details(AnyValue.string("value"))))
+        }
     }
 }

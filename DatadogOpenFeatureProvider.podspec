@@ -19,6 +19,8 @@ Pod::Spec.new do |s|
   s.source_files = "Sources/DatadogOpenFeatureProvider/**/*.swift"
 
   s.dependency 'OpenFeature', '~> 0.3.0'
+  # FFL-3433: draft only; raise this bound to the first protected native release before publication.
+  # Use the local SDK podspecs through IntegrationTests/PII/run.py while validating this draft.
   s.dependency 'DatadogFlags', '>= 3.17.0', '< 4.0.0'
 
 end
