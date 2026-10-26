@@ -42,7 +42,11 @@ public class DatadogProvider: FeatureProvider {
         name: String = FlagsClient.defaultName,
         core: DatadogCoreProtocol = CoreRegistry.default
     ) {
-        self.flagsClient = FlagsClient.create(experimentationOptOutMode: experimentationOptOutMode, name: name, in: core)
+        self.flagsClient = FlagsClient.create(
+            configuration: .init(experimentationOptOutMode: experimentationOptOutMode),
+            name: name,
+            in: core
+        )
         self.experimentationOptOutMode = experimentationOptOutMode
         self.metadata = DatadogProviderMetadata()
     }
