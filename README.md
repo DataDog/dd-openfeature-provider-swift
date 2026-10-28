@@ -84,6 +84,31 @@ let client = OpenFeatureAPI.shared.getClient()
 let flagValue = client.getBooleanValue(key: "my-feature-flag", defaultValue: false)
 ```
 
+### Evaluation telemetry control
+
+This capability requires the companion native SDK change that adds `FlagsClient.Configuration`. It is not available with the current minimum SDK version. Before releasing this provider change, update the package and podspec minimum versions to the native release that includes the API. For local validation, see [Local native SDK validation](Tests/LocalRuntime/README.md).
+
+Enable the control when creating the provider:
+
+```swift
+let provider = DatadogProvider(enableEvaluationTelemetryOptOutParameter: true)
+let context = MutableContext(
+    targetingKey: "user123",
+    structure: MutableStructure(attributes: [
+        "dd_evaluation_telemetry_opt_out": .boolean(true)
+    ])
+)
+await OpenFeatureAPI.shared.setProviderAndWait(provider: provider, initialContext: context)
+```
+
+The original `DatadogProvider(name:core:)` initializer leaves the control disabled. When enabled, only typed boolean `true` suppresses new evaluation events, counts, and automatic RUM flag annotations. Missing, false, null, strings, numbers, and other types preserve telemetry.
+
+Update the context through `OpenFeatureAPI.setEvaluationContextAndWait(evaluationContext:)`. The attribute remains available in assignment requests, stored context, and exposure attributes. Applications can use it in targeting rules. Changes use the normal assignment refresh and exposure deduplication behavior. The latest requested context controls telemetry suppression while a refresh is pending or fails.
+
+Telemetry suppression does not change flag evaluation, exposure logging, unrelated telemetry, or customer hooks. A targeting rule can change an assignment when the attribute changes. Each named client keeps its own configuration. Reusing a name keeps its original configuration. The control does not remove previously recorded events or RUM annotations.
+
+Exposure events can still contain subject data. This control does not replace SDK tracking consent.
+
 ## Contributing
 
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines and [DEVELOPMENT.md](DEVELOPMENT.md) for detailed setup instructions, testing guidelines, and development workflow.
