@@ -1,5 +1,7 @@
 # Unreleased
 
+- [IMPROVEMENT] Preserve native evaluation-time privacy consent in OpenFeature metadata and forward native error codes. Requires the protected native SDK tracked by FFL-3432; publication is blocked until its released dependency minimum is recorded in both package managers.
+
 # 0.3.0 / 2026-10-08
 
 - [CHANGED] Require Datadog SDK `>= 3.17.0, < 4.0.0` in Swift Package Manager and CocoaPods.
