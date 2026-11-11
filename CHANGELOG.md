@@ -1,5 +1,8 @@
 # Unreleased
 
+- [FEATURE] Add `DatadogProvider(configuration:name:core:)` to configure the native Flags client, including per-subject evaluation telemetry opt-out. Flag evaluation and experiment exposures are preserved.
+- [CHANGED] Require Datadog SDK `>= 3.21.0, < 4.0.0` and Xcode 26 / Swift 6.2 or later. Applications using Xcode 16 must remain on provider 0.3.x with a compatible native SDK. Swift language mode and minimum OS versions are unchanged.
+
 # 0.3.0 / 2026-10-08
 
 - [CHANGED] Require Datadog SDK `>= 3.17.0, < 4.0.0` in Swift Package Manager and CocoaPods.

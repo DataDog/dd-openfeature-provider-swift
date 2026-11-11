@@ -24,28 +24,20 @@ public class DatadogProvider: FeatureProvider {
         self.metadata = DatadogProviderMetadata()
     }
 
-    /// Creates a provider with an optional evaluation telemetry control.
+    /// Creates a provider whose native Flags client uses the given configuration.
     ///
-    /// When enabled, only boolean `true` at `dd_evaluation_telemetry_opt_out` suppresses new
-    /// evaluation events, counts, and automatic RUM flag annotations. Exposures remain unchanged.
-    /// The attribute remains available for targeting and exposure reporting. Context changes refresh assignments.
-    /// Existing named clients retain their original configuration.
+    /// An existing native client with the same name keeps its original configuration.
     ///
     /// - Parameters:
-    ///   - enableEvaluationTelemetryOptOutParameter: Enables evaluation telemetry suppression through the context attribute.
-    ///     The original initializer leaves this control disabled.
+    ///   - configuration: The configuration for the native Flags client.
     ///   - name: A unique native client name. Defaults to the default Flags client name.
     ///   - core: The Datadog SDK core. Defaults to the shared instance.
     public init(
-        enableEvaluationTelemetryOptOutParameter: Bool,
+        configuration: FlagsClient.Configuration,
         name: String = FlagsClient.defaultName,
         core: DatadogCoreProtocol = CoreRegistry.default
     ) {
-        self.flagsClient = FlagsClient.create(
-            configuration: .init(enableEvaluationTelemetryOptOutParameter: enableEvaluationTelemetryOptOutParameter),
-            name: name,
-            in: core
-        )
+        self.flagsClient = FlagsClient.create(configuration: configuration, name: name, in: core)
         self.metadata = DatadogProviderMetadata()
     }
 
@@ -83,8 +75,8 @@ public class DatadogProvider: FeatureProvider {
                     //
                     // This also assumes context-set calls do not overlap: `currentState` is
                     // global to the client, so a concurrent `setEvaluationContext` could leave
-                    // it reflecting the other call's outcome. OpenFeature serializes context
-                    // changes, so this holds in practice.
+                    // it reflecting the other call's outcome. OpenFeature 0.3.1 does not
+                    // serialize context changes: each `setEvaluationContext` call starts its own task.
                     if flagsClient.state.currentState == .stale {
                         // The client fell back to cached flags, so treat the context change as
                         // a success and surface staleness via `observe()` (matches Android).

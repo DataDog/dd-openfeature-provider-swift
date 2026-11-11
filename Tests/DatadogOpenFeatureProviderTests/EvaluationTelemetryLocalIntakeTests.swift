@@ -31,7 +31,7 @@ final class EvaluationTelemetryLocalIntakeTests: XCTestCase {
             with: .init(customFlagsEndpoint: try server.url("assignments"), customExposureEndpoint: try server.url("exposures"), customEvaluationEndpoint: try server.url("evaluations")),
             in: core
         )
-        let provider = DatadogProvider(enableEvaluationTelemetryOptOutParameter: true, core: core)
+        let provider = DatadogProvider(configuration: .init(enableEvaluationTelemetryOptOutParameter: true), core: core)
         let api = OpenFeatureAPI()
         defer { api.clearProvider() }
         await api.setProviderAndWait(provider: provider, initialContext: context(.boolean(true), subject: "A"))
@@ -90,7 +90,7 @@ final class EvaluationTelemetryLocalIntakeTests: XCTestCase {
                 with: .init(customFlagsEndpoint: try server.url("assignments"), customExposureEndpoint: try server.url("exposures"), customEvaluationEndpoint: try server.url("evaluations")),
                 in: core
             )
-            let provider = DatadogProvider(enableEvaluationTelemetryOptOutParameter: enabled, core: core)
+            let provider = DatadogProvider(configuration: .init(enableEvaluationTelemetryOptOutParameter: enabled), core: core)
             let api = OpenFeatureAPI()
             defer { api.clearProvider() }
             await api.setProviderAndWait(provider: provider, initialContext: context(.boolean(false)))
@@ -119,7 +119,6 @@ final class EvaluationTelemetryLocalIntakeTests: XCTestCase {
             let evaluationCount = try server.evaluations().reduce(0) { $0 + ($1["evaluation_count"] as? Int ?? 0) }
             XCTAssertEqual(evaluationCount, enabled ? 4 : 6)
             XCTAssertEqual(server.assignmentCount, 3)
-            print("Provider targeting: enabled=\(enabled), assignments=3, exposures=3, evaluations=\(evaluationCount), hooks=6")
         }
     }
 
@@ -148,7 +147,7 @@ final class EvaluationTelemetryLocalIntakeTests: XCTestCase {
             in: core
         )
         let provider = enabled
-            ? DatadogProvider(enableEvaluationTelemetryOptOutParameter: true, core: core)
+            ? DatadogProvider(configuration: .init(enableEvaluationTelemetryOptOutParameter: true), core: core)
             : DatadogProvider(core: core)
         let api = OpenFeatureAPI()
         defer { api.clearProvider() }
@@ -181,7 +180,7 @@ final class EvaluationTelemetryLocalIntakeTests: XCTestCase {
         let evaluations = try server.evaluations()
         let rum = try server.events(at: "rum")
         let optedOut = enabled && value == .boolean(true)
-        print("Provider intake: enabled=\(enabled), value=\(String(describing: value)), assignments=\(assignments.count), exposures=\(exposures.count), evaluations=\(evaluations.count), RUM=\(rum.count)")
+
         XCTAssertEqual(assignments.count, 1)
         XCTAssertEqual(exposures.count, 1)
         XCTAssertEqual(evaluations.count, optedOut ? 0 : 3)
@@ -214,8 +213,8 @@ final class EvaluationTelemetryLocalIntakeTests: XCTestCase {
             with: .init(customFlagsEndpoint: try server.url("assignments"), customExposureEndpoint: try server.url("exposures"), customEvaluationEndpoint: try server.url("evaluations")),
             in: core
         )
-        let provider = DatadogProvider(enableEvaluationTelemetryOptOutParameter: true, name: "controlled", core: core)
-        let normal = DatadogProvider(enableEvaluationTelemetryOptOutParameter: false, name: "normal", core: core)
+        let provider = DatadogProvider(configuration: .init(enableEvaluationTelemetryOptOutParameter: true), name: "controlled", core: core)
+        let normal = DatadogProvider(configuration: .init(enableEvaluationTelemetryOptOutParameter: false), name: "normal", core: core)
         let api = OpenFeatureAPI()
         defer { api.clearProvider() }
         await api.setProviderAndWait(provider: provider, initialContext: context(.boolean(false)))
@@ -229,7 +228,7 @@ final class EvaluationTelemetryLocalIntakeTests: XCTestCase {
         await api.setEvaluationContextAndWait(evaluationContext: context(.boolean(true)))
         XCTAssertTrue(client.getBooleanValue(key: "hidden-flag", defaultValue: false))
         XCTAssertFalse(client.getBooleanValue(key: "missing", defaultValue: false))
-        let reused = DatadogProvider(enableEvaluationTelemetryOptOutParameter: false, name: "controlled", core: core)
+        let reused = DatadogProvider(configuration: .init(enableEvaluationTelemetryOptOutParameter: false), name: "controlled", core: core)
         XCTAssertTrue(try reused.getBooleanEvaluation(key: "hidden-flag", defaultValue: false, context: nil).value)
         await api.setEvaluationContextAndWait(evaluationContext: context(.string("true")))
         XCTAssertTrue(client.getBooleanValue(key: "string-flag", defaultValue: false))
@@ -275,7 +274,7 @@ final class EvaluationTelemetryLocalIntakeTests: XCTestCase {
         let keys = evaluations.compactMap { $0["flag"] as? [String: Any] }.compactMap { $0["key"] as? String }
         let exposures = try server.events(at: "exposures")
         let rum = try server.events(at: "rum")
-        print("Provider transitions: assignments=\(server.assignmentCount), exposures=\(exposures.count), evaluation keys=\(keys.sorted())")
+
         XCTAssertEqual(Set(keys), ["initial-flag", "normal-flag", "string-flag", "cached-visible-flag", "failed-default"])
         XCTAssertEqual(evaluations.count, 5)
         XCTAssertEqual(exposures.count, 6)
@@ -299,7 +298,7 @@ final class EvaluationTelemetryLocalIntakeTests: XCTestCase {
             with: .init(customFlagsEndpoint: try server.url("assignments"), customExposureEndpoint: try server.url("exposures"), customEvaluationEndpoint: try server.url("evaluations")),
             in: core
         )
-        let provider = DatadogProvider(enableEvaluationTelemetryOptOutParameter: true, core: core)
+        let provider = DatadogProvider(configuration: .init(enableEvaluationTelemetryOptOutParameter: true), core: core)
         let held = expectation(description: "initial assignments held")
         server.holdAssignments { held.fulfill() }
         let initialize = Task { try await provider.initialize(initialContext: context(.boolean(false))) }
@@ -322,7 +321,6 @@ final class EvaluationTelemetryLocalIntakeTests: XCTestCase {
         let keys = evaluations.compactMap { $0["flag"] as? [String: Any] }.compactMap { $0["key"] as? String }
         XCTAssertEqual(keys, ["visible-flag"])
         XCTAssertEqual(try server.events(at: "exposures").count, 2)
-        print("Provider pending: assignments=3, exposures=2, evaluation keys=\(keys)")
     }
 
     private func context(_ value: Value, subject: String = "local-user") -> MutableContext {

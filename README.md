@@ -6,12 +6,12 @@ This package provides a bridge between [OpenFeature](https://openfeature.dev/) a
 
 ## Requirements
 
-- **Xcode 16.0+ / Swift 6.0+ toolchain with Datadog SDK 3.17.0**; newer SDK releases may require a newer toolchain (the provider continues to use Swift 5 language mode)
+- **Xcode 26+ / Swift 6.2+ toolchain** (the provider continues to use Swift 5 language mode)
 - **iOS 15.0+ / macOS 12.6+ / watchOS 9.0+ / tvOS 15.0+**
 
 ### Datadog SDK Version
 
-Provider 0.3.0 requires Datadog SDK versions `>= 3.17.0, < 4.0.0` and adopts its minimum platform versions. Datadog SDK 3.17.0 also requires Swift tools 6.0 for Swift Package Manager.
+Provider 0.4.0 requires Datadog SDK versions `>= 3.21.0, < 4.0.0` and adopts its minimum platform versions. Datadog SDK 3.21.0 requires Swift tools 6.2 for Swift Package Manager.
 
 Datadog SDK 3.19.0 requires Swift tools 6.2 (Xcode 26 or later). If you use an older toolchain, select a compatible SDK version within the supported range. See the [installation guide](INSTALLATION.md) for details.
 
@@ -86,12 +86,12 @@ let flagValue = client.getBooleanValue(key: "my-feature-flag", defaultValue: fal
 
 ### Evaluation telemetry control
 
-This capability requires the companion native SDK change that adds `FlagsClient.Configuration`. It is not available with the current minimum SDK version. Before releasing this provider change, update the package and podspec minimum versions to the native release that includes the API. For local validation, see [Local native SDK validation](Tests/LocalRuntime/README.md).
+This capability uses `FlagsClient.Configuration` from Datadog SDK 3.21.0 or later. For runtime validation, see [Native SDK validation](Tests/LocalRuntime/README.md).
 
 Enable the control when creating the provider:
 
 ```swift
-let provider = DatadogProvider(enableEvaluationTelemetryOptOutParameter: true)
+let provider = DatadogProvider(configuration: .init(enableEvaluationTelemetryOptOutParameter: true))
 let context = MutableContext(
     targetingKey: "user123",
     structure: MutableStructure(attributes: [
@@ -103,7 +103,7 @@ await OpenFeatureAPI.shared.setProviderAndWait(provider: provider, initialContex
 
 The original `DatadogProvider(name:core:)` initializer leaves the control disabled. When enabled, only typed boolean `true` suppresses new evaluation events, counts, and automatic RUM flag annotations. Missing, false, null, strings, numbers, and other types preserve telemetry.
 
-Update the context through `OpenFeatureAPI.setEvaluationContextAndWait(evaluationContext:)`. The attribute remains available in assignment requests, stored context, and exposure attributes. Applications can use it in targeting rules. Changes use the normal assignment refresh and exposure deduplication behavior. The latest requested context controls telemetry suppression while a refresh is pending or fails.
+Update the context through `OpenFeatureAPI.setEvaluationContextAndWait(evaluationContext:)`. The attribute remains available in assignment requests, stored context, and exposure attributes. Applications can use it in targeting rules. Changes use the normal assignment refresh and exposure deduplication behavior. Telemetry is suppressed while either the latest requested subject or the subject whose assignments are loaded has opted out. Each subject's latest requested value decides for that subject.
 
 Telemetry suppression does not change flag evaluation, exposure logging, unrelated telemetry, or customer hooks. A targeting rule can change an assignment when the attribute changes. Each named client keeps its own configuration. Reusing a name keeps its original configuration. The control does not remove previously recorded events or RUM annotations.
 

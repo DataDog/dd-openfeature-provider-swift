@@ -18,7 +18,7 @@ make clean      # Clean build artifacts
 
 ### Prerequisites
 
-1. **Install Xcode** from the Mac App Store or Apple Developer portal
+1. **Install Xcode 26 or later** from the Mac App Store or Apple Developer portal
 2. **Verify Xcode Command Line Tools** are installed:
    ```bash
    xcode-select --install
