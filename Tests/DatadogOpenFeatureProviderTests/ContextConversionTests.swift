@@ -177,7 +177,8 @@ internal struct TypeConversionTests {
                 structure: MutableStructure(attributes: ["dd_assignment_token": token])
             )
             let flagsContext = try FlagsEvaluationContext(context)
-            #expect(flagsContext.attributes["dd_assignment_token"] == (try AnyValue(token)))
+            let expectedToken = try AnyValue(token)
+            #expect(flagsContext.attributes["dd_assignment_token"] == expectedToken)
         }
         #expect(try FlagsEvaluationContext(MutableContext(targetingKey: "subject")).attributes["dd_assignment_token"] == nil)
     }
