@@ -18,6 +18,17 @@ extension FlagsEvaluationContext {
 
         var attributes: [String: AnyValue] = [:]
         for (key, value) in context.asMap() {
+            if key == "dd_assignment_token" {
+                switch value {
+                case .string(let token): attributes[key] = .string(token)
+                case .null: attributes[key] = .null
+                default:
+                    // Let the native SDK omit and warn for any non-string credential without
+                    // converting nested values that may be unsupported targeting attributes.
+                    attributes[key] = .bool(false)
+                }
+                continue
+            }
             // Convert OpenFeature Value to DatadogFlags AnyValue, preserving original types
             attributes[key] = try AnyValue(value)
         }

@@ -84,6 +84,27 @@ let client = OpenFeatureAPI.shared.getClient()
 let flagValue = client.getBooleanValue(key: "my-feature-flag", defaultValue: false)
 ```
 
+### Subject authorization for assignment downloads
+
+This capability requires a native Datadog Flags SDK release that includes subject authorization. Select that release before supplying a token; the provider does not add credential transport or redaction to older native SDKs. The provider's dependency range remains compatible with older releases for ordinary no-token use.
+
+For protected environments, obtain a JWT from your backend and include it in the complete OpenFeature context update:
+
+```swift
+let context = MutableContext(
+    targetingKey: "user-123",
+    structure: MutableStructure(attributes: [
+        "country": .string("US"),
+        "dd_assignment_token": .string(jwtFromYourBackend)
+    ])
+)
+await OpenFeatureAPI.shared.setEvaluationContextAndWait(evaluationContext: context)
+```
+
+The Datadog SDK sends the token only as the `DD-Assignment-Token` assignment-request header. It excludes the reserved field from targeting, persistence, Datadog tracking, and diagnostics, and treats JWT contents as opaque. OpenFeature hooks can still access the original OpenFeature context, so scope token-bearing contexts to the Datadog provider instead of sharing them with providers that might forward context attributes.
+
+A usable token immediately prevents retained assignments for another targeting key from being evaluated. Same-subject assignments can remain available and become stale if refresh fails, while an explicit authorization rejection returns OpenFeature `GENERAL` when no eligible assignments exist. A successful download or eligible same-subject stale fallback ends the temporary boundary; later no-token updates use the native SDK's ordinary behavior. Include the appropriate token in each complete context update that requires authorization. See the Datadog Flags SDK documentation for token validation, fallback, and proxy requirements.
+
 ## Contributing
 
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines and [DEVELOPMENT.md](DEVELOPMENT.md) for detailed setup instructions, testing guidelines, and development workflow.
