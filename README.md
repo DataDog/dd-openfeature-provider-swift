@@ -13,7 +13,7 @@ This package provides a bridge between [OpenFeature](https://openfeature.dev/) a
 
 Provider 0.4.0 requires Datadog SDK versions `>= 3.21.0, < 4.0.0` and adopts its minimum platform versions. Datadog SDK 3.21.0 requires Swift tools 6.2 for Swift Package Manager.
 
-Datadog SDK 3.19.0 requires Swift tools 6.2 (Xcode 26 or later). If you use an older toolchain, select a compatible SDK version within the supported range. See the [installation guide](INSTALLATION.md) for details.
+Applications that need Xcode 16 must remain on provider `>= 0.3.0, < 0.4.0` and select Datadog SDK 3.17.0 or 3.18.0. See the [installation guide](INSTALLATION.md) for details.
 
 For apps targeting iOS 14, tvOS 14, or watchOS 8, use provider `>= 0.2.2, < 0.3.0` with Datadog SDK `>= 3.13.0, < 3.17.0`. See the [installation guide](INSTALLATION.md) for version constraints.
 
@@ -101,7 +101,7 @@ let context = MutableContext(
 await OpenFeatureAPI.shared.setProviderAndWait(provider: provider, initialContext: context)
 ```
 
-The original `DatadogProvider(name:core:)` initializer leaves the control disabled. When enabled, only typed boolean `true` suppresses new evaluation events, counts, and automatic RUM flag annotations. Missing, false, null, strings, numbers, and other types preserve telemetry.
+The original `DatadogProvider(name:core:)` initializer leaves the control disabled. When enabled, evaluation telemetry is suppressed until the initial cached policy is known or an explicit context is supplied. After that, only typed boolean `true` opts a subject out of new evaluation events, counts, and automatic RUM flag annotations. Missing, false, null, strings, numbers, and other types do not opt a subject out.
 
 Update the context through `OpenFeatureAPI.setEvaluationContextAndWait(evaluationContext:)`. The attribute remains available in assignment requests, stored context, and exposure attributes. Applications can use it in targeting rules. Changes use the normal assignment refresh and exposure deduplication behavior. Telemetry is suppressed while either the latest requested subject or the subject whose assignments are loaded has opted out. Each subject's latest requested value decides for that subject.
 
