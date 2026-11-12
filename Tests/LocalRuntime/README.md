@@ -2,7 +2,7 @@
 
 The runtime tests use the actual OpenFeature client, provider, native Flags client, and loopback HTTP intake. They observe assignment requests, exposures, evaluation events, and RUM annotations. They use fake credentials only with local endpoints.
 
-The evaluation telemetry control requires Datadog SDK 3.22.0 or later and Xcode 26 / Swift 6.2 or later. Validate the published dependency first, without SwiftPM edit mode:
+Provider 0.4.0 requires Datadog SDK 3.22.0 or later and Xcode 26 / Swift 6.2 or later. Validate the published dependency first, without SwiftPM edit mode:
 
 ```sh
 swift package resolve

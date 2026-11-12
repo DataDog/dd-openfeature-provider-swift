@@ -62,10 +62,10 @@ import DatadogCore
 import DatadogFlags
 
 // 1. Initialize Datadog SDK and enable flags
-let config = Datadog.Configuration.builderUsing(
+let config = Datadog.Configuration(
     clientToken: "YOUR_CLIENT_TOKEN",
-    environment: "production"
-).build()
+    env: "production"
+)
 
 Datadog.initialize(with: config, trackingConsent: .granted)
 
@@ -86,7 +86,7 @@ let flagValue = client.getBooleanValue(key: "my-feature-flag", defaultValue: fal
 
 ### Evaluation telemetry control
 
-This capability uses `FlagsClient.Configuration` from Datadog SDK 3.22.0 or later. For runtime validation, see [Native SDK validation](Tests/LocalRuntime/README.md).
+Provider 0.4.0 uses `FlagsClient.Configuration` with Datadog SDK 3.22.0 or later. For runtime validation, see [Native SDK validation](Tests/LocalRuntime/README.md).
 
 Enable the control when creating the provider:
 
@@ -148,7 +148,9 @@ Ordinary feature allocations remain available. Experimentation opt-out does not 
 
 Supply a timestamp string in the [native SDK's supported format](https://github.com/DataDog/dd-sdk-ios/blob/3.22.0/DatadogFlags/Sources/Models/FlagsEvaluationContext.swift).
 In an enabled mode, malformed timestamps fail context initialization or refresh without sending an assignment request.
-Provider evaluation methods translate native errors, including `.invalidContext`, into OpenFeature errors.
+Direct provider evaluation methods translate native errors, including `.invalidContext`, into OpenFeature errors.
+OpenFeature 0.3.x handles a failed context initialization or refresh by setting the provider status to `.error`.
+Subsequent OpenFeature client evaluations return the application default with `.general`, without calling the provider's evaluation methods.
 Reusing a named native client retains its original mode and configuration.
 
 ## Contributing

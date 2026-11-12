@@ -69,6 +69,13 @@ final class EvaluationTelemetryLocalIntakeTests: XCTestCase {
             let subject = try XCTUnwrap(attributes["subject"] as? [String: Any])
             let targeting = try XCTUnwrap(subject["targeting_attributes"] as? [String: Any])
             XCTAssertEqual(targeting["dd_experimentation_opt_out_at"] as? String, cutoff)
+            let reused = DatadogProvider(configuration: .init(experimentationOptOutMode: .disabled), core: core)
+            let nextContext = MutableContext(targetingKey: "reused-subject", structure: MutableStructure(attributes: ["dd_experimentation_opt_out_at": .string(cutoff)]))
+            try await reused.onContextSet(oldContext: context, newContext: nextContext)
+            XCTAssertEqual(server.assignmentCount, 2)
+            let reusedAttributes = try assignmentAttributes(server)
+            let reusedOptions = try XCTUnwrap(reusedAttributes["evaluation_options"] as? [String: Any])
+            XCTAssertEqual(reusedOptions["experimentation_opt_out_mode"] as? String, wireMode)
             Datadog.internalFlushAndDeinitialize(instanceName: instanceName)
             XCTAssertEqual(try server.evaluations().count, 1)
             XCTAssertEqual(try server.events(at: "exposures").count, 1)
@@ -106,11 +113,17 @@ final class EvaluationTelemetryLocalIntakeTests: XCTestCase {
         for evaluate in evaluations {
             XCTAssertThrowsError(try evaluate()) { XCTAssertEqual($0 as? OpenFeatureError, .invalidContextError) }
         }
+        let api = OpenFeatureAPI()
+        defer { api.clearProvider() }
+        await api.setProviderAndWait(provider: provider, initialContext: context)
+        let details = api.getClient().getBooleanDetails(key: "flag", defaultValue: false)
+        XCTAssertFalse(details.value)
+        XCTAssertEqual(details.errorCode, .general)
         XCTAssertEqual(server.assignmentCount, 0)
     }
 
     private func assignmentAttributes(_ server: ProviderLocalIntake) throws -> [String: Any] {
-        let request = try XCTUnwrap(server.requests.first { $0.url?.path == "/assignments" })
+        let request = try XCTUnwrap(server.requests.last { $0.url?.path == "/assignments" })
         let root = try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(request.httpBody)) as? [String: Any])
         let data = try XCTUnwrap(root["data"] as? [String: Any])
         return try XCTUnwrap(data["attributes"] as? [String: Any])
