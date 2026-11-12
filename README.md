@@ -22,6 +22,7 @@ For apps targeting iOS 14, tvOS 14, or watchOS 8, use provider `>= 0.2.2, < 0.3.
 Swift Package Manager uses OpenFeature Swift SDK 0.3.1, the first release with watchOS and tvOS support. OpenFeature 0.4 and later require compatibility changes that will be handled separately.
 
 CocoaPods continues to use OpenFeature 0.3.0 because it is the latest version published to CocoaPods. As a result, CocoaPods installation remains iOS-only.
+New provider releases and native Datadog pods use Git/tag installation. See the [CocoaPods instructions](INSTALLATION.md#cocoapods).
 
 ## Installation
 

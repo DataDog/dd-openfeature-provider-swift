@@ -51,11 +51,24 @@ dependencies: [
 
 > **Note:** CocoaPods installation only supports iOS because OpenFeature 0.3.0 is the latest version published to CocoaPods and its podspec does not include tvOS or watchOS. For full platform support, use Swift Package Manager.
 
-Add this to your `Podfile`:
+New provider releases use Git tags instead of CocoaPods Trunk publication, following the [native SDK migration](https://github.com/DataDog/dd-sdk-ios/pull/3250).
+Existing versions on Trunk remain available.
+
+Add Git references for the provider and each native Datadog pod to your `Podfile`:
 
 ```ruby
-pod 'DatadogOpenFeatureProvider', '~> 0.4.0'
+native_sdk = { :git => 'https://github.com/DataDog/dd-sdk-ios.git', :tag => '3.22.0' }
+pod 'DatadogInternal', native_sdk
+pod 'DatadogCore', native_sdk
+pod 'DatadogFlags', native_sdk
+pod 'DatadogOpenFeatureProvider', :git => 'https://github.com/DataDog/dd-openfeature-provider-swift.git', :tag => '0.4.0'
 ```
+
+`DatadogCore` supports the SDK initialization shown in the usage examples.
+Pin any additional native Datadog pods to the same Git tag.
+Keep `DatadogInternal` explicit: a podspec dependency does not inherit another pod's Git source.
+When updating the native SDK, use one released version within `>= 3.22.0, < 4.0.0` for all native pods.
+The existing OpenFeature 0.3.0 pod is still resolved from Trunk.
 
 Then run:
 ```bash

@@ -83,7 +83,7 @@ The **Latest SDK Compatibility** GitLab job is temporarily manual and non-blocki
 
 Run `make test-compatibility-tools` for offline regression tests, or `python3 -B tools/test-latest-sdk-compatibility.py --check-only` for dependency resolution and platform validation without builds. `--repository-root PATH` can check a different provider checkout or extracted release for regression investigations.
 
-The job is included in regular provider pipelines and supports scheduled pipelines, but currently requires a manual start in either case. After automatic execution is restored, a maintainer must create a [GitLab pipeline schedule](https://docs.gitlab.com/ci/pipelines/schedules/) targeting `develop` (and `main` once it contains the job) to detect Datadog iOS SDK releases without a provider commit. The schedule is configured in GitLab, not created by this PR. These pipelines also run the normal checks and must not set `RELEASE_GIT_TAG` or publishing variables. No cross-repository release trigger is configured.
+The job is included in regular provider pipelines and supports scheduled pipelines, but currently requires a manual start in either case. After automatic execution is restored, a maintainer must create a [GitLab pipeline schedule](https://docs.gitlab.com/ci/pipelines/schedules/) targeting `develop` (and `main` once it contains the job) to detect Datadog iOS SDK releases without a provider commit. The schedule is configured in GitLab, not created by this PR. These pipelines also run the normal checks. No cross-repository release trigger is configured.
 
 ## Code Quality
 
@@ -125,6 +125,7 @@ The project uses Swift Package Manager with the following dependency strategy:
 2. **For Datadog SDK**:
    ```bash
    # Keep Package.swift and the podspec dependency bounds aligned
+   # Align SmokeTests/cocoapods/Podfile.src and the installation example with the SDK pin
    # Check deployment targets before widening the supported range
    # Test compatibility with: make platform-compatibility test
    # Update README.md and INSTALLATION.md requirements if needed
@@ -132,7 +133,15 @@ The project uses Swift Package Manager with the following dependency strategy:
 
 ## CI/CD
 
-The this repository uses GitLab CI for automated testing. **Contributors using forks won't have access to this CI pipeline.**
+This repository uses GitLab CI for automated testing. **Contributors using forks won't have access to this CI pipeline.**
+
+Release tags run the validation jobs without publishing to CocoaPods Trunk.
+New CocoaPods installations load the provider and native Datadog pods from Git tags, following the [native SDK policy](https://github.com/DataDog/dd-sdk-ios/pull/3250).
+Podspecs and CocoaPods smoke tests remain supported. The smoke harness pins the provider to the checked-out commit and the native pods to SDK 3.22.0.
+It tests dynamic and static iOS applications sequentially on the selected simulator.
+
+The manual `release-publish-podspecs` target and its script remain available for exceptional compatibility releases.
+They are not part of the automatic release pipeline.
 
 **Before submitting a pull request, run these commands locally to ensure your changes will pass CI:**
 ```bash

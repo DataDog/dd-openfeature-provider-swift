@@ -1,5 +1,6 @@
 # Unreleased
 
+- [CHANGED] Install new CocoaPods releases from Git tags. Keep podspecs and consumer smoke tests, and stop automatic publication to CocoaPods Trunk.
 - [FEATURE] Add `DatadogProvider(configuration:name:core:)` to configure the native Flags client, including per-subject evaluation telemetry opt-out. Flag evaluation and experiment exposures are preserved.
 - [FEATURE] Support the native SDK's experimentation opt-out modes through provider configuration and flag selection through `Flags.Configuration`.
 - [FIXED] Translate native evaluation errors from direct provider calls into OpenFeature errors, including invalid experimentation context and missing flags.
