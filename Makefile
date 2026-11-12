@@ -90,7 +90,7 @@ smoke-test-ios-all:
 # │ SDK release: │
 # └──────────────┘
 
-# Publish Cocoapods podspecs to trunk
+# Manual compatibility helper. CI no longer publishes podspecs to Trunk.
 release-publish-podspecs:
 	@$(call require_param,ARTIFACTS_PATH)
 	@:$(eval DRY_RUN ?= 1)
@@ -124,6 +124,6 @@ help:
 	@echo "  smoke-test       - Run smoke tests for specified directory and platform"
 	@echo "  smoke-test-ios   - Run smoke tests for specified directory using iOS Simulator"
 	@echo "  smoke-test-ios-all - Run all smoke tests (SPM + CocoaPods) using iOS Simulator"
-	@echo "  release-publish-podspecs - Publish podspecs to CocoaPods trunk"
+	@echo "  release-publish-podspecs - Manual CocoaPods Trunk publication for exceptional compatibility releases"
 	@echo "  bump             - Bump version and create commit"
 	@echo "  help             - Show this help message"

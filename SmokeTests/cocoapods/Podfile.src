@@ -1,6 +1,9 @@
 abstract_target 'Common' do
   pod 'OpenFeature', '= 0.3.0'
-  pod 'DatadogFlags', '>= 3.17.0', '< 4.0.0'
+  native_sdk = { :git => 'https://github.com/DataDog/dd-sdk-ios.git', :tag => '3.22.0' }
+  pod 'DatadogInternal', native_sdk
+  pod 'DatadogCore', native_sdk
+  pod 'DatadogFlags', native_sdk
   pod 'DatadogOpenFeatureProvider', :git => 'https://github.com/DataDog/dd-openfeature-provider-swift.git', :GIT_REFERENCE
 
   target 'App Dynamic iOS' do
@@ -22,3 +25,13 @@ abstract_target 'Common' do
 
 end
 
+# OpenFeature 0.3.0 declares iOS 14; use the provider's iOS 15 minimum for its build.
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    next unless target.name == 'OpenFeature' || target.name.start_with?('OpenFeature-')
+
+    target.build_configurations.each do |configuration|
+      configuration.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+    end
+  end
+end

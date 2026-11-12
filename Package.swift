@@ -20,7 +20,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/open-feature/swift-sdk.git", "0.3.1"..<"0.4.0"),
-        .package(url: "https://github.com/DataDog/dd-sdk-ios.git", from: "3.17.0"),
+        .package(url: "https://github.com/DataDog/dd-sdk-ios.git", from: "3.22.0"),
     ],
     targets: [
         .target(
@@ -34,7 +34,9 @@ let package = Package(
             name: "DatadogOpenFeatureProviderTests",
             dependencies: [
                 "DatadogOpenFeatureProvider",
+                .product(name: "DatadogCore", package: "dd-sdk-ios"),
                 .product(name: "DatadogFlags", package: "dd-sdk-ios"),
+                .product(name: "DatadogRUM", package: "dd-sdk-ios"),
                 .product(name: "OpenFeature", package: "swift-sdk"),
             ]
         ),

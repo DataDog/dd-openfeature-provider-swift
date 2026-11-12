@@ -8,6 +8,23 @@ import Foundation
 import DatadogFlags
 import OpenFeature
 
+extension FlagDetails {
+    func throwIfError() throws {
+        switch error {
+        case .providerNotReady:
+            throw OpenFeatureError.providerNotReadyError
+        case .flagNotFound:
+            throw OpenFeatureError.flagNotFoundError(key: key)
+        case .typeMismatch:
+            throw OpenFeatureError.typeMismatchError
+        case .invalidContext:
+            throw OpenFeatureError.invalidContextError
+        case nil:
+            return
+        }
+    }
+}
+
 // MARK: - ProviderEvaluation Extensions
 
 extension ProviderEvaluation where T == Bool {

@@ -1,5 +1,11 @@
 # Unreleased
 
+- [CHANGED] Install new CocoaPods releases from Git tags. Keep podspecs and consumer smoke tests, and stop automatic publication to CocoaPods Trunk.
+- [FEATURE] Add `DatadogProvider(configuration:name:core:)` to configure the native Flags client, including per-subject evaluation telemetry opt-out. Flag evaluation and experiment exposures are preserved.
+- [FEATURE] Support the native SDK's experimentation opt-out modes through provider configuration and flag selection through `Flags.Configuration`.
+- [FIXED] Translate native evaluation errors from direct provider calls into OpenFeature errors, including invalid experimentation context and missing flags.
+- [CHANGED] Require Datadog SDK `>= 3.22.0, < 4.0.0` and Xcode 26 / Swift 6.2 or later. Applications using Xcode 16 must remain on provider 0.3.x with a compatible native SDK. Swift language mode and minimum OS versions are unchanged.
+
 # 0.3.0 / 2026-10-08
 
 - [CHANGED] Require Datadog SDK `>= 3.17.0, < 4.0.0` in Swift Package Manager and CocoaPods.

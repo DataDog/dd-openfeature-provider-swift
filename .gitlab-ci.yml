@@ -3,25 +3,17 @@ stages:
   - lint
   - test
   - smoke-test
-  - release-publish
 
 variables:
   MAIN_BRANCH: "main"
   DEVELOP_BRANCH: "develop"
-  DEFAULT_XCODE: "16.2.0"
-  DEFAULT_IOS_OS: "18.3.1"
-  DEFAULT_TVOS_OS: "18.2"
-  # Prefilled variables for running a pipeline manually:
-  # Ref.: https://docs.gitlab.com/ee/ci/pipelines/index.html#prefill-variables-in-manual-pipelines
-  RELEASE_GIT_TAG:
-    description: "The Git tag for the release pipeline. If set, release pipeline will be triggered for the given tag."
-  RELEASE_DRY_RUN:
-    value: "1"
-    description: "Controls the dry run mode for the release pipeline. If set to '1', the pipeline will execute all steps but will not publish artifacts. If set to '0', the pipeline will run fully."
+  DEFAULT_XCODE: "26.0.0"
+  DEFAULT_IOS_OS: "26.0"
+  DEFAULT_TVOS_OS: "26.0"
 
 default:
   tags:
-    - macos:sonoma
+    - macos:sequoia-arm64
     - specific:true
 
 # ┌───────────────┐
@@ -45,7 +37,7 @@ default:
 
 .release-pipeline-job:
   rules: 
-    - if: '$CI_COMMIT_TAG || $RELEASE_GIT_TAG'
+    - if: '$CI_COMMIT_TAG' # Validate release tags without publishing to Trunk.
 
 # ┌──────────────────────────┐
 # │ Environment validation:  │
@@ -110,7 +102,7 @@ Latest SDK Compatibility:
     - macos:sequoia-arm64
     - specific:true
   variables:
-    # SDK 3.19.0 requires Swift 6.2; keep pinned-SDK jobs on DEFAULT_XCODE.
+    # Exercise newer SDK releases separately from the minimum supported SDK.
     LATEST_SDK_XCODE: "26.0.0"
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
@@ -127,9 +119,9 @@ Platform Tests (iOS):
     - !reference [.release-pipeline-job, rules]
   variables:
     PLATFORM: "iOS Simulator"
-    DEVICE: "iPhone 16 Pro"
+    DEVICE: "iPhone 17 Pro"
   script:
-    - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE"
+    - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE" --iOS
     - make clean repo-setup ENV=ci
     - xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=$PLATFORM,name=$DEVICE,OS=$DEFAULT_IOS_OS" build test
 
@@ -178,33 +170,8 @@ Smoke Tests (iOS):
     - !reference [.release-pipeline-job, rules]
   variables:
     PLATFORM: "iOS Simulator"
-    DEVICE: "iPhone 16 Pro"
+    DEVICE: "iPhone 17 Pro"
   script:
-    - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE"
+    - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE" --iOS
     - make clean repo-setup ENV=ci
     - make smoke-test-ios-all OS="$DEFAULT_IOS_OS" PLATFORM="$PLATFORM" DEVICE="$DEVICE"
-
-# ┌──────────────┐
-# │ SDK release: │
-# └──────────────┘
-
-.release-before-script: &export_MAKE_release_params
-  - export GIT_TAG=${RELEASE_GIT_TAG:-$CI_COMMIT_TAG} # CI_COMMIT_TAG if set, otherwise default to RELEASE_GIT_TAG
-  - if [ -z "$GIT_TAG" ]; then echo "GIT_TAG is not set"; exit 1; fi # sanity check
-  - export ARTIFACTS_PATH="artifacts/$GIT_TAG"
-  - export DRY_RUN=${CI_COMMIT_TAG:+0} # 0 if CI_COMMIT_TAG is set
-  - export DRY_RUN=${DRY_RUN:-$RELEASE_DRY_RUN} # otherwise default to RELEASE_DRY_RUN
-
-Publish CP podspecs:
-  stage: release-publish
-  rules: 
-    - !reference [.release-pipeline-job, rules]
-  before_script:
-    - *export_MAKE_release_params
-  script:
-    - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE"
-    - make env-check
-    - make clean
-    - mkdir -p "$ARTIFACTS_PATH"
-    - git clone --branch "$GIT_TAG" . "$ARTIFACTS_PATH/dd-openfeature-provider-swift"
-    - make release-publish-podspecs
