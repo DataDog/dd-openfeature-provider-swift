@@ -62,6 +62,16 @@ pod 'DatadogInternal', native_sdk
 pod 'DatadogCore', native_sdk
 pod 'DatadogFlags', native_sdk
 pod 'DatadogOpenFeatureProvider', :git => 'https://github.com/DataDog/dd-openfeature-provider-swift.git', :tag => '0.4.0'
+
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    next unless target.name == 'OpenFeature' || target.name.start_with?('OpenFeature-')
+
+    target.build_configurations.each do |configuration|
+      configuration.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+    end
+  end
+end
 ```
 
 `DatadogCore` supports the SDK initialization shown in the usage examples.
@@ -69,6 +79,7 @@ Pin any additional native Datadog pods to the same Git tag.
 Keep `DatadogInternal` explicit: a podspec dependency does not inherit another pod's Git source.
 When updating the native SDK, use one released version within `>= 3.22.0, < 4.0.0` for all native pods.
 The existing OpenFeature 0.3.0 pod is still resolved from Trunk.
+The hook builds that pod at the provider's iOS 15 minimum. Newer toolchains can reject its declared iOS 14 target.
 
 Then run:
 ```bash
