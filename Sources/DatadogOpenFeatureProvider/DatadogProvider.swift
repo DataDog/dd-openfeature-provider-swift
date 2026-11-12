@@ -91,28 +91,33 @@ public class DatadogProvider: FeatureProvider {
 
     public func getBooleanEvaluation(key: String, defaultValue: Bool, context: EvaluationContext?) throws -> ProviderEvaluation<Bool> {
         let details = flagsClient.getBooleanDetails(key: key, defaultValue: defaultValue)
+        try details.throwIfError()
         return ProviderEvaluation(details)
     }
 
     public func getStringEvaluation(key: String, defaultValue: String, context: EvaluationContext?) throws -> ProviderEvaluation<String> {
         let details = flagsClient.getStringDetails(key: key, defaultValue: defaultValue)
+        try details.throwIfError()
         return ProviderEvaluation(details)
     }
 
     public func getIntegerEvaluation(key: String, defaultValue: Int64, context: EvaluationContext?) throws -> ProviderEvaluation<Int64> {
         let intValue = Int(defaultValue)
         let details = flagsClient.getIntegerDetails(key: key, defaultValue: intValue)
+        try details.throwIfError()
         return ProviderEvaluation(details)
     }
 
     public func getDoubleEvaluation(key: String, defaultValue: Double, context: EvaluationContext?) throws -> ProviderEvaluation<Double> {
         let details = flagsClient.getDoubleDetails(key: key, defaultValue: defaultValue)
+        try details.throwIfError()
         return ProviderEvaluation(details)
     }
 
     public func getObjectEvaluation(key: String, defaultValue: Value, context: EvaluationContext?) throws -> ProviderEvaluation<Value> {
         let defaultAnyValue = try AnyValue(defaultValue)
         let details = flagsClient.getObjectDetails(key: key, defaultValue: defaultAnyValue)
+        try details.throwIfError()
         return ProviderEvaluation(details)
     }
 }

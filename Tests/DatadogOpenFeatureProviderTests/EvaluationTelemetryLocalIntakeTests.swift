@@ -17,6 +17,106 @@ import DatadogRUM
 /// Uses the actual provider, native client, and URLSession against a loopback HTTP intake.
 final class EvaluationTelemetryLocalIntakeTests: XCTestCase {
     @MainActor
+    func testFlagSelectionReachesNativeAssignmentRequests() async throws {
+        let ready = expectation(description: "selection intake ready")
+        let server = try ProviderLocalIntake(ready: ready)
+        server.start()
+        await fulfillment(of: [ready], timeout: 5)
+        defer { server.stop() }
+        let instanceName = "provider-selection-\(UUID().uuidString)"
+        let core = Datadog.initialize(with: .init(clientToken: "local-intake-token", env: "local-test"), trackingConsent: .granted, instanceName: instanceName)
+        defer { Datadog.internalFlushAndDeinitialize(instanceName: instanceName) }
+        Flags.enable(with: .init(customFlagsEndpoint: try server.url("assignments"), flagSelection: .init(tags: ["mobile"], keyPatterns: ["local-*"])), in: core)
+        let api = OpenFeatureAPI()
+        defer { api.clearProvider() }
+        await api.setProviderAndWait(provider: DatadogProvider(core: core), initialContext: context(.boolean(false)))
+        let client = api.getClient()
+        XCTAssertTrue(client.getBooleanValue(key: "local-flag", defaultValue: false))
+        let missing = client.getBooleanDetails(key: "missing", defaultValue: false)
+        XCTAssertFalse(missing.value)
+        XCTAssertEqual(missing.errorCode, .flagNotFound)
+        let attributes = try assignmentAttributes(server)
+        let selection = try XCTUnwrap(attributes["flag_selection"] as? [String: Any])
+        XCTAssertEqual(selection["tags"] as? [String], ["mobile"])
+        XCTAssertEqual(selection["key_patterns"] as? [String], ["local-*"])
+    }
+
+    @MainActor
+    func testExperimentationModesReachNativeAssignmentRequests() async throws {
+        let modes: [(FlagsClient.ExperimentationOptOutMode, String)] = [(.immediate, "immediate"), (.futureExperimentsOnly, "future_experiments_only")]
+        for (mode, wireMode) in modes {
+            let ready = expectation(description: "experimentation intake ready")
+            let server = try ProviderLocalIntake(ready: ready)
+            server.start()
+            await fulfillment(of: [ready], timeout: 5)
+            defer { server.stop() }
+            let instanceName = "provider-experimentation-\(UUID().uuidString)"
+            let core = Datadog.initialize(with: .init(clientToken: "local-intake-token", env: "local-test"), trackingConsent: .granted, instanceName: instanceName)
+            defer { Datadog.internalFlushAndDeinitialize(instanceName: instanceName) }
+            Flags.enable(with: .init(customFlagsEndpoint: try server.url("assignments"), customExposureEndpoint: try server.url("exposures"), customEvaluationEndpoint: try server.url("evaluations")), in: core)
+            let provider = DatadogProvider(configuration: .init(experimentationOptOutMode: mode), core: core)
+            let api = OpenFeatureAPI()
+            defer { api.clearProvider() }
+            let cutoff = "2026-11-12T12:00:00Z"
+            let context = MutableContext(targetingKey: "subject", structure: MutableStructure(attributes: ["dd_experimentation_opt_out_at": .string(cutoff)]))
+            await api.setProviderAndWait(provider: provider, initialContext: context)
+            let details = api.getClient().getBooleanDetails(key: "local-flag", defaultValue: false)
+            XCTAssertTrue(details.value)
+            XCTAssertNil(details.errorCode)
+            let attributes = try assignmentAttributes(server)
+            let options = try XCTUnwrap(attributes["evaluation_options"] as? [String: Any])
+            XCTAssertEqual(options["experimentation_opt_out_mode"] as? String, wireMode)
+            let subject = try XCTUnwrap(attributes["subject"] as? [String: Any])
+            let targeting = try XCTUnwrap(subject["targeting_attributes"] as? [String: Any])
+            XCTAssertEqual(targeting["dd_experimentation_opt_out_at"] as? String, cutoff)
+            Datadog.internalFlushAndDeinitialize(instanceName: instanceName)
+            XCTAssertEqual(try server.evaluations().count, 1)
+            XCTAssertEqual(try server.events(at: "exposures").count, 1)
+        }
+    }
+
+    @MainActor
+    func testInvalidExperimentationContextSurfacesForEveryEvaluationType() async throws {
+        let ready = expectation(description: "invalid context intake ready")
+        let server = try ProviderLocalIntake(ready: ready)
+        server.start()
+        await fulfillment(of: [ready], timeout: 5)
+        defer { server.stop() }
+        let instanceName = "provider-invalid-context-\(UUID().uuidString)"
+        let core = Datadog.initialize(with: .init(clientToken: "local-intake-token", env: "local-test"), trackingConsent: .granted, instanceName: instanceName)
+        defer { Datadog.internalFlushAndDeinitialize(instanceName: instanceName) }
+        Flags.enable(with: .init(customFlagsEndpoint: try server.url("assignments"), customEvaluationEndpoint: try server.url("evaluations")), in: core)
+        let provider = DatadogProvider(configuration: .init(experimentationOptOutMode: .immediate), core: core)
+        let context = MutableContext(targetingKey: "subject", structure: MutableStructure(attributes: ["dd_experimentation_opt_out_at": .boolean(true)]))
+        do {
+            try await provider.initialize(initialContext: context)
+            XCTFail("Malformed experimentation timestamps must fail initialization")
+        } catch FlagsError.invalidContext {
+            // The native client rejects malformed input before making a request.
+        } catch {
+            XCTFail("Expected invalidContext, received \(error)")
+        }
+        let evaluations: [() throws -> Void] = [
+            { _ = try provider.getBooleanEvaluation(key: "flag", defaultValue: false, context: nil) },
+            { _ = try provider.getStringEvaluation(key: "flag", defaultValue: "default", context: nil) },
+            { _ = try provider.getIntegerEvaluation(key: "flag", defaultValue: 0, context: nil) },
+            { _ = try provider.getDoubleEvaluation(key: "flag", defaultValue: 0, context: nil) },
+            { _ = try provider.getObjectEvaluation(key: "flag", defaultValue: .null, context: nil) },
+        ]
+        for evaluate in evaluations {
+            XCTAssertThrowsError(try evaluate()) { XCTAssertEqual($0 as? OpenFeatureError, .invalidContextError) }
+        }
+        XCTAssertEqual(server.assignmentCount, 0)
+    }
+
+    private func assignmentAttributes(_ server: ProviderLocalIntake) throws -> [String: Any] {
+        let request = try XCTUnwrap(server.requests.first { $0.url?.path == "/assignments" })
+        let root = try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(request.httpBody)) as? [String: Any])
+        let data = try XCTUnwrap(root["data"] as? [String: Any])
+        return try XCTUnwrap(data["attributes"] as? [String: Any])
+    }
+
+    @MainActor
     func testSubjectSwitchKeepsInstalledSubjectsOptOut() async throws {
         let ready = expectation(description: "loopback intake ready")
         let server = try ProviderLocalIntake(ready: ready)
@@ -167,8 +267,12 @@ final class EvaluationTelemetryLocalIntakeTests: XCTestCase {
         XCTAssertEqual(result.reason, "TARGETING_MATCH")
         XCTAssertEqual(result.flagMetadata["allocationKey"], .string("allocation"))
         XCTAssertNil(result.errorCode)
-        XCTAssertFalse(client.getBooleanValue(key: "missing", defaultValue: false))
-        XCTAssertEqual(client.getStringValue(key: "local-flag", defaultValue: "fallback"), "fallback")
+        let missing = client.getBooleanDetails(key: "missing", defaultValue: false)
+        XCTAssertFalse(missing.value)
+        XCTAssertEqual(missing.errorCode, .flagNotFound)
+        let mismatch = client.getStringDetails(key: "local-flag", defaultValue: "fallback")
+        XCTAssertEqual(mismatch.value, "fallback")
+        XCTAssertEqual(mismatch.errorCode, .typeMismatch)
         XCTAssertEqual(hook.calls, 3)
         try XCTUnwrap(core as? DatadogCore).flush()
         monitor.addError(message: "unrelated application error")
@@ -260,7 +364,9 @@ final class EvaluationTelemetryLocalIntakeTests: XCTestCase {
         server.releaseAssignments(status: 500)
         await changedRefresh.value
         XCTAssertEqual(nativeClient.state.currentState, .error)
-        XCTAssertFalse(try provider.getBooleanEvaluation(key: "failed-default", defaultValue: false, context: nil).value)
+        XCTAssertThrowsError(try provider.getBooleanEvaluation(key: "failed-default", defaultValue: false, context: nil)) {
+            XCTAssertEqual($0 as? OpenFeatureError, .providerNotReadyError)
+        }
         await api.setEvaluationContextAndWait(evaluationContext: context(.boolean(true)))
         XCTAssertTrue(client.getBooleanValue(key: "cached-hidden-flag", defaultValue: false))
         XCTAssertEqual(nativeClient.state.currentState, .ready)
@@ -307,7 +413,9 @@ final class EvaluationTelemetryLocalIntakeTests: XCTestCase {
         server.holdAssignments { changedHeld.fulfill() }
         let changeContext = Task { try await provider.onContextSet(oldContext: context(.boolean(false)), newContext: context(.boolean(true))) }
         await fulfillment(of: [changedHeld], timeout: 5)
-        XCTAssertFalse(try provider.getBooleanEvaluation(key: "not-ready", defaultValue: false, context: nil).value)
+        XCTAssertThrowsError(try provider.getBooleanEvaluation(key: "not-ready", defaultValue: false, context: nil)) {
+            XCTAssertEqual($0 as? OpenFeatureError, .providerNotReadyError)
+        }
         XCTAssertEqual(server.assignmentCount, 2)
         server.releaseAssignments(status: 200)
         try await initialize.value
@@ -446,7 +554,17 @@ private final class ProviderLocalIntake {
                     "allocationKey": "targeted-allocation", "variationKey": String(target), "variationType": "boolean",
                     "variationValue": target, "reason": "TARGETING_MATCH", "doLog": true,
                 ]
-                body = try JSONSerialization.data(withJSONObject: ["data": ["attributes": ["flags": flags]]])
+                var responseAttributes: [String: Any] = ["flags": flags]
+                if let options = attributes?["evaluation_options"] as? [String: Any],
+                   let mode = options["experimentation_opt_out_mode"] as? String,
+                   let cutoff = targetingAttributes?["dd_experimentation_opt_out_at"] as? String {
+                    responseAttributes["evaluation_options"] = [
+                        "experimentation_opt_out": true,
+                        "experimentation_opt_out_mode": mode,
+                        "dd_experimentation_opt_out_at": cutoff,
+                    ]
+                }
+                body = try JSONSerialization.data(withJSONObject: ["data": ["attributes": responseAttributes]])
             } else {
                 body = Data("{}".utf8)
             }

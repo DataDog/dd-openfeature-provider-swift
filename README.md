@@ -11,7 +11,7 @@ This package provides a bridge between [OpenFeature](https://openfeature.dev/) a
 
 ### Datadog SDK Version
 
-Provider 0.4.0 requires Datadog SDK versions `>= 3.21.0, < 4.0.0` and adopts its minimum platform versions. Datadog SDK 3.21.0 requires Swift tools 6.2 for Swift Package Manager.
+Provider 0.4.0 requires Datadog SDK versions `>= 3.22.0, < 4.0.0` and adopts its minimum platform versions. Datadog SDK 3.22.0 requires Swift tools 6.2 for Swift Package Manager.
 
 Applications that need Xcode 16 must remain on provider `>= 0.3.0, < 0.4.0` and select Datadog SDK 3.17.0 or 3.18.0. See the [installation guide](INSTALLATION.md) for details.
 
@@ -86,7 +86,7 @@ let flagValue = client.getBooleanValue(key: "my-feature-flag", defaultValue: fal
 
 ### Evaluation telemetry control
 
-This capability uses `FlagsClient.Configuration` from Datadog SDK 3.21.0 or later. For runtime validation, see [Native SDK validation](Tests/LocalRuntime/README.md).
+This capability uses `FlagsClient.Configuration` from Datadog SDK 3.22.0 or later. For runtime validation, see [Native SDK validation](Tests/LocalRuntime/README.md).
 
 Enable the control when creating the provider:
 
@@ -108,6 +108,48 @@ Update the context through `OpenFeatureAPI.setEvaluationContextAndWait(evaluatio
 Telemetry suppression does not change flag evaluation, exposure logging, unrelated telemetry, or customer hooks. A targeting rule can change an assignment when the attribute changes. Each named client keeps its own configuration. Reusing a name keeps its original configuration. The control does not remove previously recorded events or RUM annotations.
 
 Exposure events can still contain subject data. This control does not replace SDK tracking consent.
+
+### Flag selection
+
+Configure flag selection when enabling the native Flags feature, before creating a provider:
+
+```swift
+Flags.enable(with: .init(
+    flagSelection: .init(tags: ["mobile"], keyPatterns: ["checkout-*"])
+))
+let provider = DatadogProvider()
+```
+
+The selection applies to every native client in the same Datadog core. A flag matches any supplied tag or key pattern.
+Key patterns match the whole key, and `*` matches any sequence of characters.
+The selection is fixed when Flags is enabled. An unsupported or invalid selection can load all flags.
+See the [native SDK selection rules](https://github.com/DataDog/dd-sdk-ios/blob/3.22.0/DatadogFlags/Sources/Flags.swift) for limits and fallback behavior.
+
+### Experimentation opt-out
+
+After enabling Flags, configure the provider with a native experimentation opt-out mode:
+
+```swift
+let provider = DatadogProvider(configuration: .init(
+    experimentationOptOutMode: .immediate
+))
+let context = MutableContext(
+    targetingKey: "user123",
+    structure: MutableStructure(attributes: [
+        "dd_experimentation_opt_out_at": .string("2026-11-12T12:00:00Z")
+    ])
+)
+await OpenFeatureAPI.shared.setProviderAndWait(provider: provider, initialContext: context)
+```
+
+The default mode, `.disabled`, ignores the attribute. `.immediate` excludes experiment allocations for a valid timestamp, including a future timestamp.
+`.futureExperimentsOnly` retains experiments activated before the timestamp. It excludes experiments with equal, later, or unknown activation times.
+Ordinary feature allocations remain available. Experimentation opt-out does not enable evaluation telemetry suppression.
+
+Supply a timestamp string in the [native SDK's supported format](https://github.com/DataDog/dd-sdk-ios/blob/3.22.0/DatadogFlags/Sources/Models/FlagsEvaluationContext.swift).
+In an enabled mode, malformed timestamps fail context initialization or refresh without sending an assignment request.
+Provider evaluation methods translate native errors, including `.invalidContext`, into OpenFeature errors.
+Reusing a named native client retains its original mode and configuration.
 
 ## Contributing
 

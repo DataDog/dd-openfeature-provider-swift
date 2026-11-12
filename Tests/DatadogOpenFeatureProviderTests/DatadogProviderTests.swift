@@ -108,8 +108,9 @@ internal struct ProviderMetadataTests {
         let provider = DatadogProvider()
         #expect(provider.metadata.name == "datadog")
 
-        let result = try provider.getBooleanEvaluation(key: "test-flag", defaultValue: false, context: nil)
-        #expect(result.value == false)
+        #expect(throws: OpenFeatureError.providerNotReadyError) {
+            try provider.getBooleanEvaluation(key: "test-flag", defaultValue: false, context: nil)
+        }
     }
 
     @Test("Empty metadata in evaluation results")

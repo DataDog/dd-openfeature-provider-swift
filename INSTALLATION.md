@@ -11,10 +11,10 @@ The requirements and installation examples below apply to provider 0.4.0. For ol
   - **Swift Package Manager**: iOS 15.0+, macOS 12.6+, watchOS 9.0+, tvOS 15.0+
   - **CocoaPods**: iOS 15.0+ only
 - **Dependencies:**
-  - Datadog SDK: `>= 3.21.0, < 4.0.0`
+  - Datadog SDK: `>= 3.22.0, < 4.0.0`
   - OpenFeature Swift SDK: 0.3.1 with Swift Package Manager; 0.3.0 with CocoaPods
 
-If your app also declares the Datadog SDK directly, its dependency requirement must overlap `>= 3.21.0, < 4.0.0`.
+If your app also declares the Datadog SDK directly, its dependency requirement must overlap `>= 3.22.0, < 4.0.0`.
 
 Applications that need Xcode 16 must remain on provider `>= 0.3.0, < 0.4.0` and explicitly select Datadog SDK 3.17.0 or 3.18.0. Provider 0.4.0 requires Xcode 26 or later.
 
