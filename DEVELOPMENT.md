@@ -142,6 +142,8 @@ It tests dynamic and static iOS applications sequentially on the selected simula
 
 The manual `release-publish-podspecs` target and its script remain available for exceptional compatibility releases.
 They are not part of the automatic release pipeline.
+Manual use requires a tagged checkout under `ARTIFACTS_PATH/dd-openfeature-provider-swift` and the script's existing release authentication.
+The native dependencies must already exist on Trunk. These helpers are not the normal publication path for provider 0.4.0.
 
 **Before submitting a pull request, run these commands locally to ensure your changes will pass CI:**
 ```bash
