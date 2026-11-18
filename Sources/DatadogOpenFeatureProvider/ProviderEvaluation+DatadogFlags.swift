@@ -17,7 +17,8 @@ extension ProviderEvaluation where T == Bool {
             value: details.value,
             flagMetadata: details.providerMetadata,
             variant: details.variant,
-            reason: details.reason
+            reason: details.error == nil ? details.reason : Reason.error.rawValue,
+            errorCode: details.openFeatureErrorCode
         )
     }
 }
@@ -29,7 +30,8 @@ extension ProviderEvaluation where T == String {
             value: details.value,
             flagMetadata: details.providerMetadata,
             variant: details.variant,
-            reason: details.reason
+            reason: details.error == nil ? details.reason : Reason.error.rawValue,
+            errorCode: details.openFeatureErrorCode
         )
     }
 }
@@ -41,7 +43,8 @@ extension ProviderEvaluation where T == Double {
             value: details.value,
             flagMetadata: details.providerMetadata,
             variant: details.variant,
-            reason: details.reason
+            reason: details.error == nil ? details.reason : Reason.error.rawValue,
+            errorCode: details.openFeatureErrorCode
         )
     }
 }
@@ -54,7 +57,8 @@ extension ProviderEvaluation where T == Int64 {
             value: Int64(details.value),
             flagMetadata: details.providerMetadata,
             variant: details.variant,
-            reason: details.reason
+            reason: details.error == nil ? details.reason : Reason.error.rawValue,
+            errorCode: details.openFeatureErrorCode
         )
     }
 }
@@ -67,12 +71,23 @@ extension ProviderEvaluation where T == Value {
             value: Value(details.value),
             flagMetadata: details.providerMetadata,
             variant: details.variant,
-            reason: details.reason
+            reason: details.error == nil ? details.reason : Reason.error.rawValue,
+            errorCode: details.openFeatureErrorCode
         )
     }
 }
 
 extension FlagDetails {
+    var openFeatureErrorCode: ErrorCode? {
+        switch error {
+        case nil: return nil
+        case .providerNotReady: return .providerNotReady
+        case .flagNotFound: return .flagNotFound
+        case .typeMismatch: return .typeMismatch
+        case .invalidContext: return .invalidContext
+        }
+    }
+
     /// The allocation key and the split features for customer code (`__dd_feature.<key>`).
     var providerMetadata: [String: FlagMetadataValue] {
         var metadata = flagMetadata.compactMapValues(FlagMetadataValue.init(splitFeature:))

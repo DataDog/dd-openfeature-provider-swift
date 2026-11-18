@@ -317,3 +317,43 @@ struct ExposureHookMatchingTests {
         }
     }
 }
+
+@Suite("Native errors in OpenFeature details")
+struct NativeErrorMappingTests {
+    @Test("A native evaluation error becomes an OpenFeature error code with reason ERROR", arguments: [
+        (FlagEvaluationError.providerNotReady, ErrorCode.providerNotReady),
+        (.flagNotFound, .flagNotFound),
+        (.typeMismatch, .typeMismatch),
+        (.invalidContext, .invalidContext),
+    ])
+    func mapsError(native: FlagEvaluationError, expected: ErrorCode) {
+        let evaluation = ProviderEvaluation(FlagDetails(key: "flag", value: false, reason: "DEFAULT", error: native))
+        #expect(evaluation.errorCode == expected)
+        #expect(evaluation.reason == Reason.error.rawValue)
+    }
+
+    @Test("A successful evaluation keeps its reason and has no error code")
+    func success() {
+        let evaluation = ProviderEvaluation(FlagDetails(key: "flag", value: true, variant: "on", reason: "TARGETING_MATCH"))
+        #expect(evaluation.errorCode == nil)
+        #expect(evaluation.reason == "TARGETING_MATCH")
+    }
+
+    @Test("The exposure hook reports a mapped native error as a non-exposure")
+    func hookSeesMappedError() async {
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global().async {
+                ExposureDecisionStore.removeAll()
+                let recorder = EvaluationRecorder()
+                let hook = ExposureHook { recorder.record($0) }
+                let details = FlagDetails(key: "flag", value: false, error: .flagNotFound)
+                ExposureDecisionStore.record(.init(flagKey: "flag", variant: nil, allocationKey: nil, targetingKey: "A", decision: .exposure(cacheHit: false, targetingKey: "A")))
+                let evaluation = ProviderEvaluation(details)
+                hook.handle(flagKey: "flag", variant: evaluation.variant, flagMetadata: evaluation.flagMetadata, errorCode: evaluation.errorCode, context: MutableContext(targetingKey: "A"), providerName: "datadog")
+                #expect(recorder.all.first?.errorCode == .flagNotFound)
+                #expect(recorder.all.first?.isExposure == false)
+                continuation.resume()
+            }
+        }
+    }
+}
