@@ -20,7 +20,9 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/open-feature/swift-sdk.git", "0.3.1"..<"0.4.0"),
-        .package(url: "https://github.com/DataDog/dd-sdk-ios.git", from: "3.17.0"),
+        // Temporary: DataDog/dd-sdk-ios#3468, until the dd-sdk-ios release that contains getDetailsWithExposure.
+        // Then this becomes the release floor.
+        .package(url: "https://github.com/DataDog/dd-sdk-ios.git", revision: "2c1b2f3f6db2a653e5459498be6bcd2d89fd0ebc"),
     ],
     targets: [
         .target(
