@@ -8,9 +8,11 @@ stages:
 variables:
   MAIN_BRANCH: "main"
   DEVELOP_BRANCH: "develop"
-  DEFAULT_XCODE: "16.2.0"
-  DEFAULT_IOS_OS: "18.3.1"
-  DEFAULT_TVOS_OS: "18.2"
+  # The Tart team image installs Xcode 26.0 as /Applications/Xcode-26.0.0.app, with its default simulator runtimes.
+  DEFAULT_XCODE: "26.0.0"
+  DEFAULT_IOS_OS: "26.0.1"
+  DEFAULT_TVOS_OS: "26.0"
+  TART_EXECUTOR_SHELL: "/bin/bash -l"
   # Prefilled variables for running a pipeline manually:
   # Ref.: https://docs.gitlab.com/ee/ci/pipelines/index.html#prefill-variables-in-manual-pipelines
   RELEASE_GIT_TAG:
@@ -21,8 +23,8 @@ variables:
 
 default:
   tags:
-    - macos:sonoma
-    - specific:true
+    - macos:tart
+  image: "486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/ci-platform-machine-images/tart-vm:dd-openfeature-provider-swift-sequoia-latest"
 
 # ┌───────────────┐
 # │ Utility jobs: │
@@ -103,21 +105,12 @@ Platform Compatibility:
 
 Latest SDK Compatibility:
   stage: test
-  # Temporary until the Sequoia runner is provisioned and this job succeeds.
-  when: manual
-  allow_failure: true
-  tags:
-    - macos:sequoia-arm64
-    - specific:true
-  variables:
-    # SDK 3.19.0 requires Swift 6.2; keep pinned-SDK jobs on DEFAULT_XCODE.
-    LATEST_SDK_XCODE: "26.0.0"
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
     - !reference [.test-pipeline-job, rules]
     - !reference [.release-pipeline-job, rules]
   script:
-    - ./tools/runner-setup.sh --xcode "$LATEST_SDK_XCODE" --iOS --tvOS --watchOS
+    - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE" --iOS --tvOS --watchOS
     - make latest-sdk-compatibility
 
 Platform Tests (iOS):
@@ -127,7 +120,7 @@ Platform Tests (iOS):
     - !reference [.release-pipeline-job, rules]
   variables:
     PLATFORM: "iOS Simulator"
-    DEVICE: "iPhone 16 Pro"
+    DEVICE: "iPhone 17 Pro"
   script:
     - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE"
     - make clean repo-setup ENV=ci
@@ -178,7 +171,7 @@ Smoke Tests (iOS):
     - !reference [.release-pipeline-job, rules]
   variables:
     PLATFORM: "iOS Simulator"
-    DEVICE: "iPhone 16 Pro"
+    DEVICE: "iPhone 17 Pro"
   script:
     - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE"
     - make clean repo-setup ENV=ci
@@ -201,6 +194,8 @@ Publish CP podspecs:
     - !reference [.release-pipeline-job, rules]
   before_script:
     - *export_MAKE_release_params
+    # Vault authenticates with AWS credentials, which a Tart VM gets from the IAM proxy.
+    - eval "$(aws configure export-credentials --format env)"
   script:
     - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE"
     - make env-check
