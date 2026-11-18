@@ -84,6 +84,45 @@ let client = OpenFeatureAPI.shared.getClient()
 let flagValue = client.getBooleanValue(key: "my-feature-flag", defaultValue: false)
 ```
 
+### Exposures in your own data store
+
+Register `ExposureHook` to receive every evaluation of `DatadogProvider` with the exposure decision that the Datadog SDK uses for Datadog. Set `Flags.Configuration.trackExposures` to `false` to stop sending exposures to Datadog at the same time.
+
+```swift
+let flagsConfig = Flags.Configuration(trackExposures: false)
+Flags.enable(with: flagsConfig)
+
+OpenFeatureAPI.shared.addHooks(hooks: ExposureHook { evaluation in
+    guard evaluation.shouldSend else {
+        return
+    }
+    exposureQueue.enqueue(
+        flag: evaluation.flagKey,
+        variant: evaluation.variant,
+        allocation: evaluation.allocationKey,
+        subject: evaluation.targetingKey,
+        holdoutKey: evaluation.features["holdout.key"]
+    )
+})
+```
+
+`ExposureEvaluation` has these members:
+
+| Member | Meaning |
+| --- | --- |
+| `isExposure` | A successful evaluation of an allocation that logs exposures, with a non-blank allocation key and variant, repeats included. |
+| `isCacheHit` | For an exposure, the client's exposure cache holds the same allocation, variant and split for the subject and flag. After an exposure of another assignment, or after the cache evicts the entry, the next exposure is new. |
+| `shouldSend` | A new exposure (`isExposure` and a cache miss). The Datadog write depends on `trackExposures` and the tracking consent. |
+| `features` | Features of the selected split for customer code, for example `holdout.key`, `holdout.assignment_group` and `holdout.should_include_in_holdout_analysis`. |
+| `flagKey`, `variant`, `allocationKey`, `targetingKey`, `evaluationContext`, `errorCode` | The evaluation. A failed evaluation has a `nil` `variant` and `allocationKey`, and its `errorCode`. `targetingKey` is `nil` for an evaluation made before any context was set. `evaluationContext` is a copy. |
+
+- Register the hook on `OpenFeatureAPI.shared` or on a client. It reports evaluations of `DatadogProvider` and skips other providers, with one warning.
+- The callback runs synchronously in the hook's `finally` stage, on the thread that evaluated the flag, including the main thread. Several threads can call it at the same time, so it must be thread-safe. Keep it short and move I/O to another queue. An evaluation inside the callback calls the hook again, so avoid unbounded recursion.
+- The hook catches an error thrown by the callback and leaves the evaluation unchanged. It logs the first error as a warning and later errors at debug level. Swift runtime traps, such as a failed force unwrap, stop the app as usual.
+- Each `FlagsClient` deduplicates exposures in memory, for up to 5,000 subject and flag pairs. After the app restarts, the first evaluation of a flag is a new exposure.
+- The SDK records each exposure when the flag resolves, for Datadog and for the hook. OpenFeature Swift hooks are non-throwing, so the result that the provider returns is final.
+- Flag metadata carries the split features as `__dd_feature.<key>` entries, next to `allocationKey`. The `__dd_feature.` prefix is the stable contract.
+
 ## Contributing
 
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines and [DEVELOPMENT.md](DEVELOPMENT.md) for detailed setup instructions, testing guidelines, and development workflow.
