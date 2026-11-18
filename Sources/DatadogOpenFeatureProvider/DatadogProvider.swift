@@ -7,6 +7,7 @@
 import Foundation
 import OpenFeature
 import Combine
+@_spi(Internal)
 import DatadogFlags
 import DatadogInternal
 
@@ -73,35 +74,47 @@ public class DatadogProvider: FeatureProvider {
     }
 
     public func getBooleanEvaluation(key: String, defaultValue: Bool, context: EvaluationContext?) throws -> ProviderEvaluation<Bool> {
-        let details = flagsClient.getBooleanDetails(key: key, defaultValue: defaultValue)
-        return ProviderEvaluation(details)
+        ProviderEvaluation(evaluate(key: key, defaultValue: defaultValue))
     }
 
     public func getStringEvaluation(key: String, defaultValue: String, context: EvaluationContext?) throws -> ProviderEvaluation<String> {
-        let details = flagsClient.getStringDetails(key: key, defaultValue: defaultValue)
-        return ProviderEvaluation(details)
+        ProviderEvaluation(evaluate(key: key, defaultValue: defaultValue))
     }
 
     public func getIntegerEvaluation(key: String, defaultValue: Int64, context: EvaluationContext?) throws -> ProviderEvaluation<Int64> {
-        let intValue = Int(defaultValue)
-        let details = flagsClient.getIntegerDetails(key: key, defaultValue: intValue)
-        return ProviderEvaluation(details)
+        ProviderEvaluation(evaluate(key: key, defaultValue: Int(defaultValue)))
     }
 
     public func getDoubleEvaluation(key: String, defaultValue: Double, context: EvaluationContext?) throws -> ProviderEvaluation<Double> {
-        let details = flagsClient.getDoubleDetails(key: key, defaultValue: defaultValue)
-        return ProviderEvaluation(details)
+        ProviderEvaluation(evaluate(key: key, defaultValue: defaultValue))
     }
 
     public func getObjectEvaluation(key: String, defaultValue: Value, context: EvaluationContext?) throws -> ProviderEvaluation<Value> {
         let defaultAnyValue = try AnyValue(defaultValue)
-        let details = flagsClient.getObjectDetails(key: key, defaultValue: defaultAnyValue)
-        return ProviderEvaluation(details)
+        return ProviderEvaluation(evaluate(key: key, defaultValue: defaultAnyValue))
+    }
+
+    /// Evaluates through the native client and records the exposure decision for ``ExposureHook``.
+    private func evaluate<T>(key: String, defaultValue: T) -> FlagDetails<T> where T: Equatable, T: FlagValue {
+        guard let result = (flagsClient as? FlagsClientInternal)?.getDetailsWithExposure(key: key, defaultValue: defaultValue) else {
+            return flagsClient.getDetails(key: key, defaultValue: defaultValue)
+        }
+        ExposureDecisionStore.record(.init(
+            flagKey: key,
+            variant: result.details.variant,
+            allocationKey: result.details.allocationKey,
+            targetingKey: result.exposure.targetingKey,
+            decision: result.exposure
+        ))
+        return result.details
     }
 }
 
 internal struct DatadogProviderMetadata: ProviderMetadata {
-    let name: String? = "datadog"
+    static let providerName = "datadog"
+    static let allocationKey = "allocationKey"
+
+    let name: String? = Self.providerName
 }
 
 extension DatadogProvider: EventPublisher {
