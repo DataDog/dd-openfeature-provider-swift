@@ -1,5 +1,8 @@
 # Unreleased
 
+- [ADDED] `ExposureHook`, an OpenFeature hook that receives every `DatadogProvider` evaluation with the exposure decision that the Datadog SDK uses for Datadog, including `isExposure`, `isCacheHit`, `shouldSend` and the split features for customer code.
+- [ADDED] Flag metadata carries the split features for customer code as `__dd_feature.<key>` entries.
+
 # 0.3.0 / 2026-10-08
 
 - [CHANGED] Require Datadog SDK `>= 3.17.0, < 4.0.0` in Swift Package Manager and CocoaPods.
