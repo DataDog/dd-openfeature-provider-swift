@@ -8,15 +8,10 @@ SCHEME1 := App Dynamic iOS
 SCHEME2 := App Static iOS
 endif
 
-ifeq ($(CURRENT_GIT_TAG),)
-    ifeq ($(CURRENT_GIT_BRANCH),)
-        $(error Cannot set COCOAPODS_GIT_REF because CURRENT_GIT_BRANCH is empty)
-    else
-        COCOAPODS_GIT_REF := branch => '$(CURRENT_GIT_BRANCH)'
-    endif
-else
-    COCOAPODS_GIT_REF := tag => '$(CURRENT_GIT_TAG)'
+ifeq ($(strip $(CURRENT_GIT_COMMIT)),)
+    $(error Cannot set COCOAPODS_GIT_REF because CURRENT_GIT_COMMIT is empty)
 endif
+COCOAPODS_GIT_REF := commit => '$(CURRENT_GIT_COMMIT)'
 
 clean:
 	@$(ECHO_SUBTITLE2) "make clean"
@@ -49,10 +44,10 @@ endif
 	@$(ECHO_SUBTITLE2) "➔ Testing SCHEME='$(SCHEME1)'"
 	set -eo pipefail; \
 	xcodebuild -version; \
-	xcodebuild -workspace "CPProject.xcworkspace" -destination "platform=$(PLATFORM),name=$(DEVICE),OS=$(OS)" -scheme "$(SCHEME1)" test | xcbeautify
+	xcodebuild -workspace "CPProject.xcworkspace" -destination "platform=$(PLATFORM),name=$(DEVICE),OS=$(OS)" -scheme "$(SCHEME1)" -parallel-testing-enabled NO test | xcbeautify
 
 	@$(ECHO_SUBTITLE2) "➔ Testing SCHEME='$(SCHEME2)'"
 	set -eo pipefail; \
 	xcodebuild -version; \
-	xcodebuild -workspace "CPProject.xcworkspace" -destination "platform=$(PLATFORM),name=$(DEVICE),OS=$(OS)" -scheme "$(SCHEME2)" test | xcbeautify
+	xcodebuild -workspace "CPProject.xcworkspace" -destination "platform=$(PLATFORM),name=$(DEVICE),OS=$(OS)" -scheme "$(SCHEME2)" -parallel-testing-enabled NO test | xcbeautify
 

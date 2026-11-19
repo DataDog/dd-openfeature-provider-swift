@@ -24,6 +24,23 @@ public class DatadogProvider: FeatureProvider {
         self.metadata = DatadogProviderMetadata()
     }
 
+    /// Creates a provider whose native Flags client uses the given configuration.
+    ///
+    /// An existing native client with the same name keeps its original configuration.
+    ///
+    /// - Parameters:
+    ///   - configuration: The configuration for the native Flags client.
+    ///   - name: A unique native client name. Defaults to the default Flags client name.
+    ///   - core: The Datadog SDK core. Defaults to the shared instance.
+    public init(
+        configuration: FlagsClient.Configuration,
+        name: String = FlagsClient.defaultName,
+        core: DatadogCoreProtocol = CoreRegistry.default
+    ) {
+        self.flagsClient = FlagsClient.create(configuration: configuration, name: name, in: core)
+        self.metadata = DatadogProviderMetadata()
+    }
+
     /// Internal initializer for testing purposes only
     internal init(flagsClient: FlagsClientProtocol) {
         self.flagsClient = flagsClient
@@ -58,8 +75,8 @@ public class DatadogProvider: FeatureProvider {
                     //
                     // This also assumes context-set calls do not overlap: `currentState` is
                     // global to the client, so a concurrent `setEvaluationContext` could leave
-                    // it reflecting the other call's outcome. OpenFeature serializes context
-                    // changes, so this holds in practice.
+                    // it reflecting the other call's outcome. OpenFeature 0.3.1 does not
+                    // serialize context changes: each `setEvaluationContext` call starts its own task.
                     if flagsClient.state.currentState == .stale {
                         // The client fell back to cached flags, so treat the context change as
                         // a success and surface staleness via `observe()` (matches Android).
@@ -74,28 +91,33 @@ public class DatadogProvider: FeatureProvider {
 
     public func getBooleanEvaluation(key: String, defaultValue: Bool, context: EvaluationContext?) throws -> ProviderEvaluation<Bool> {
         let details = flagsClient.getBooleanDetails(key: key, defaultValue: defaultValue)
+        try details.throwIfError()
         return ProviderEvaluation(details)
     }
 
     public func getStringEvaluation(key: String, defaultValue: String, context: EvaluationContext?) throws -> ProviderEvaluation<String> {
         let details = flagsClient.getStringDetails(key: key, defaultValue: defaultValue)
+        try details.throwIfError()
         return ProviderEvaluation(details)
     }
 
     public func getIntegerEvaluation(key: String, defaultValue: Int64, context: EvaluationContext?) throws -> ProviderEvaluation<Int64> {
         let intValue = Int(defaultValue)
         let details = flagsClient.getIntegerDetails(key: key, defaultValue: intValue)
+        try details.throwIfError()
         return ProviderEvaluation(details)
     }
 
     public func getDoubleEvaluation(key: String, defaultValue: Double, context: EvaluationContext?) throws -> ProviderEvaluation<Double> {
         let details = flagsClient.getDoubleDetails(key: key, defaultValue: defaultValue)
+        try details.throwIfError()
         return ProviderEvaluation(details)
     }
 
     public func getObjectEvaluation(key: String, defaultValue: Value, context: EvaluationContext?) throws -> ProviderEvaluation<Value> {
         let defaultAnyValue = try AnyValue(defaultValue)
         let details = flagsClient.getObjectDetails(key: key, defaultValue: defaultAnyValue)
+        try details.throwIfError()
         return ProviderEvaluation(details)
     }
 }

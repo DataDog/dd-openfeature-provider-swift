@@ -2,6 +2,7 @@
 /build
 .build
 .swiftpm
+/Packages
 .spm.pods
 Package.resolved
 Carthage/Build

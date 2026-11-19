@@ -2,21 +2,21 @@
 
 This guide covers how to install the Datadog OpenFeature Provider in your iOS, macOS, tvOS, or watchOS project.
 
-The requirements and installation examples below apply to provider 0.3.0. For older OS targets, use the [0.2.2 installation guide](https://github.com/DataDog/dd-openfeature-provider-swift/blob/0.2.2/INSTALLATION.md).
+The requirements and installation examples below apply to provider 0.4.0. For older OS targets, use the [0.2.2 installation guide](https://github.com/DataDog/dd-openfeature-provider-swift/blob/0.2.2/INSTALLATION.md).
 
 ## Requirements
 
-- **Xcode 16.0+ / Swift 6.0+ toolchain with Datadog SDK 3.17.0**; newer SDK releases may require a newer toolchain (the provider continues to use Swift 5 language mode)
+- **Xcode 26+ / Swift 6.2+ toolchain** (the provider continues to use Swift 5 language mode)
 - **Platform Support:**
   - **Swift Package Manager**: iOS 15.0+, macOS 12.6+, watchOS 9.0+, tvOS 15.0+
   - **CocoaPods**: iOS 15.0+ only
 - **Dependencies:**
-  - Datadog SDK: `>= 3.17.0, < 4.0.0`
+  - Datadog SDK: `>= 3.22.0, < 4.0.0`
   - OpenFeature Swift SDK: 0.3.1 with Swift Package Manager; 0.3.0 with CocoaPods
 
-If your app also declares the Datadog SDK directly, its dependency requirement must overlap `>= 3.17.0, < 4.0.0`.
+If your app also declares the Datadog SDK directly, its dependency requirement must overlap `>= 3.22.0, < 4.0.0`.
 
-For Swift Package Manager, the required toolchain depends on the resolved SDK version: SDK 3.17.0 requires Swift tools 6.0, while SDK 3.19.0 requires Swift tools 6.2 (Xcode 26 or later). To keep using Xcode 16 with Swift 6.0, explicitly select a compatible SDK, for example `.package(url: "https://github.com/DataDog/dd-sdk-ios.git", exact: "3.17.0")`. Do not pin SDK 3.19.0 on a toolchain that cannot build its manifest.
+Applications that need Xcode 16 must remain on provider `>= 0.3.0, < 0.4.0` and explicitly select Datadog SDK 3.17.0 or 3.18.0. Provider 0.4.0 requires Xcode 26 or later.
 
 ### Older OS Targets
 
@@ -38,24 +38,48 @@ Add this package to your `Package.swift` file:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/Datadog/dd-openfeature-provider-swift.git", "0.3.0"..<"0.4.0")
+    .package(url: "https://github.com/Datadog/dd-openfeature-provider-swift.git", "0.4.0"..<"0.5.0")
 ]
 ```
 
 **Via Xcode:**
 1. **File** → **Add Package Dependencies**
 2. Enter: `https://github.com/Datadog/dd-openfeature-provider-swift.git`
-3. Choose a version range of `0.3.0..<0.4.0`.
+3. Choose a version range of `0.4.0..<0.5.0`.
 
 ### CocoaPods
 
 > **Note:** CocoaPods installation only supports iOS because OpenFeature 0.3.0 is the latest version published to CocoaPods and its podspec does not include tvOS or watchOS. For full platform support, use Swift Package Manager.
 
-Add this to your `Podfile`:
+New provider releases use Git tags instead of CocoaPods Trunk publication, following the [native SDK migration](https://github.com/DataDog/dd-sdk-ios/pull/3250).
+Existing versions on Trunk remain available.
+
+Add Git references for the provider and each native Datadog pod to your `Podfile`:
 
 ```ruby
-pod 'DatadogOpenFeatureProvider', '~> 0.3.0'
+native_sdk = { :git => 'https://github.com/DataDog/dd-sdk-ios.git', :tag => '3.22.0' }
+pod 'DatadogInternal', native_sdk
+pod 'DatadogCore', native_sdk
+pod 'DatadogFlags', native_sdk
+pod 'DatadogOpenFeatureProvider', :git => 'https://github.com/DataDog/dd-openfeature-provider-swift.git', :tag => '0.4.0'
+
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    next unless target.name == 'OpenFeature' || target.name.start_with?('OpenFeature-')
+
+    target.build_configurations.each do |configuration|
+      configuration.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+    end
+  end
+end
 ```
+
+`DatadogCore` supports the SDK initialization shown in the usage examples.
+Pin any additional native Datadog pods to the same Git tag.
+Keep `DatadogInternal` explicit: a podspec dependency does not inherit another pod's Git source.
+When updating the native SDK, use one released version within `>= 3.22.0, < 4.0.0` for all native pods.
+The existing OpenFeature 0.3.0 pod is still resolved from Trunk.
+The hook builds that pod at the provider's iOS 15 minimum. Newer toolchains can reject its declared iOS 14 target.
 
 Then run:
 ```bash

@@ -18,7 +18,7 @@ make clean      # Clean build artifacts
 
 ### Prerequisites
 
-1. **Install Xcode** from the Mac App Store or Apple Developer portal
+1. **Install Xcode 26 or later** from the Mac App Store or Apple Developer portal
 2. **Verify Xcode Command Line Tools** are installed:
    ```bash
    xcode-select --install
@@ -77,13 +77,13 @@ xcodebuild -scheme DatadogOpenFeatureProvider -destination "generic/platform=wat
 
 The check explicitly requests that SDK version and verifies the resolved pin, so an incompatible release cannot be hidden by a fallback to an older SDK. It reuses platform compatibility validation, runs provider unit tests, and builds a consumer for iOS, macOS, tvOS, and watchOS at the provider's advertised deployment minimums. The consumer pins the selected SDK exactly. Prerelease tags are excluded; dependency constraints are never widened. CocoaPods remains covered by the existing smoke tests.
 
-This job requires Xcode 26.0 on a `macos:sequoia-arm64` runner, matching the Datadog iOS SDK 3.19.0 toolchain requirement of Swift 6.2. The mandatory pinned-dependency checks continue to use Xcode 16.2 with Datadog iOS SDK 3.17.0. When running this check locally, select a toolchain that supports the newest allowed SDK; an older toolchain is a failure, not a reason to skip that SDK.
+This job and the mandatory pinned-dependency checks require Xcode 26.0 on a `macos:sequoia-arm64` runner. The pinned Datadog iOS SDK 3.22.0 requires Swift 6.2. When running this check locally, select a toolchain that supports the newest allowed SDK; an older toolchain is a failure, not a reason to skip that SDK.
 
 The **Latest SDK Compatibility** GitLab job is temporarily manual and non-blocking while the Sequoia runner is being provisioned. Automated checks against newly released Datadog iOS SDK versions are deferred, including in scheduled pipelines; a successful pipeline does not mean this optional job ran. Once the runner is available and the job has passed, remove its `when: manual` and `allow_failure: true` settings to restore automatic, required coverage. Approval or merge of the runner image PR alone is not sufficient.
 
 Run `make test-compatibility-tools` for offline regression tests, or `python3 -B tools/test-latest-sdk-compatibility.py --check-only` for dependency resolution and platform validation without builds. `--repository-root PATH` can check a different provider checkout or extracted release for regression investigations.
 
-The job is included in regular provider pipelines and supports scheduled pipelines, but currently requires a manual start in either case. After automatic execution is restored, a maintainer must create a [GitLab pipeline schedule](https://docs.gitlab.com/ci/pipelines/schedules/) targeting `develop` (and `main` once it contains the job) to detect Datadog iOS SDK releases without a provider commit. The schedule is configured in GitLab, not created by this PR. These pipelines also run the normal checks and must not set `RELEASE_GIT_TAG` or publishing variables. No cross-repository release trigger is configured.
+The job is included in regular provider pipelines and supports scheduled pipelines, but currently requires a manual start in either case. After automatic execution is restored, a maintainer must create a [GitLab pipeline schedule](https://docs.gitlab.com/ci/pipelines/schedules/) targeting `develop` (and `main` once it contains the job) to detect Datadog iOS SDK releases without a provider commit. The schedule is configured in GitLab, not created by this PR. These pipelines also run the normal checks. No cross-repository release trigger is configured.
 
 ## Code Quality
 
@@ -111,7 +111,7 @@ make env-check
 The project uses Swift Package Manager with the following dependency strategy:
 
 - **OpenFeature Swift SDK**: Constrained to the supported 0.3.x API and pinned in `Package.resolved`
-- **Datadog SDK**: `>= 3.17.0, < 4.0.0`, requiring iOS 15, tvOS 15, and watchOS 9. SDK 3.17.0 requires Swift tools 6.0; SDK 3.19.0 requires Swift tools 6.2. The toolchain requirement depends on the resolved SDK version.
+- **Datadog SDK**: `>= 3.22.0, < 4.0.0`, requiring iOS 15, tvOS 15, and watchOS 9. The minimum SDK requires Swift tools 6.2 (Xcode 26). Future SDK releases may require a newer toolchain.
 
 ### Updating Dependencies
 
@@ -125,6 +125,7 @@ The project uses Swift Package Manager with the following dependency strategy:
 2. **For Datadog SDK**:
    ```bash
    # Keep Package.swift and the podspec dependency bounds aligned
+   # Align SmokeTests/cocoapods/Podfile.src and the installation example with the SDK pin
    # Check deployment targets before widening the supported range
    # Test compatibility with: make platform-compatibility test
    # Update README.md and INSTALLATION.md requirements if needed
@@ -132,7 +133,17 @@ The project uses Swift Package Manager with the following dependency strategy:
 
 ## CI/CD
 
-The this repository uses GitLab CI for automated testing. **Contributors using forks won't have access to this CI pipeline.**
+This repository uses GitLab CI for automated testing. **Contributors using forks won't have access to this CI pipeline.**
+
+Release tags run the validation jobs without publishing to CocoaPods Trunk.
+New CocoaPods installations load the provider and native Datadog pods from Git tags, following the [native SDK policy](https://github.com/DataDog/dd-sdk-ios/pull/3250).
+Podspecs and CocoaPods smoke tests remain supported. The smoke harness pins the provider to the checked-out commit and the native pods to SDK 3.22.0.
+It tests dynamic and static iOS applications sequentially on the selected simulator.
+
+The manual `release-publish-podspecs` target and its script remain available for exceptional compatibility releases.
+They are not part of the automatic release pipeline.
+Manual use requires a tagged checkout under `ARTIFACTS_PATH/dd-openfeature-provider-swift` and the script's existing release authentication.
+The native dependencies must already exist on Trunk. These helpers are not the normal publication path for provider 0.4.0.
 
 **Before submitting a pull request, run these commands locally to ensure your changes will pass CI:**
 ```bash
