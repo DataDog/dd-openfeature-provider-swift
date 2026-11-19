@@ -8,7 +8,8 @@ stages:
 variables:
   MAIN_BRANCH: "main"
   DEVELOP_BRANCH: "develop"
-  # The Tart team image installs Xcode 26.0 as /Applications/Xcode-26.0.0.app, with its default simulator runtimes.
+  # The Tart team image installs Xcode 26.0 as /Applications/Xcode-26.0.0.app, with its iOS, tvOS, watchOS and
+  # visionOS platforms. `xcodebuild -downloadPlatform` cannot reach the simulator service in the VM.
   DEFAULT_XCODE: "26.0.0"
   DEFAULT_IOS_OS: "26.0.1"
   DEFAULT_TVOS_OS: "26.0"
@@ -112,7 +113,7 @@ Latest SDK Compatibility:
     - !reference [.test-pipeline-job, rules]
     - !reference [.release-pipeline-job, rules]
   script:
-    - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE" --iOS --tvOS --watchOS
+    - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE"
     - make latest-sdk-compatibility
 
 Platform Tests (iOS):
@@ -147,7 +148,7 @@ Platform Tests (tvOS):
     PLATFORM: "tvOS Simulator"
     DEVICE: "Apple TV"
   script:
-    - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE" --tvOS
+    - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE"
     - make clean repo-setup ENV=ci
     - xcodebuild -scheme DatadogOpenFeatureProvider -destination "generic/platform=tvOS" build
     - xcodebuild -scheme DatadogOpenFeatureProvider -destination "platform=$PLATFORM,name=$DEVICE,OS=$DEFAULT_TVOS_OS" build test
@@ -158,7 +159,7 @@ Platform Tests (watchOS):
     - !reference [.test-pipeline-job, rules]
     - !reference [.release-pipeline-job, rules]
   script:
-    - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE" --watchOS
+    - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE"
     - make clean repo-setup ENV=ci
     - xcodebuild -scheme DatadogOpenFeatureProvider -destination "generic/platform=watchOS" build
 
