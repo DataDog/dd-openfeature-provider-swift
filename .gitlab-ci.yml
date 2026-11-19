@@ -60,6 +60,8 @@ ENV check:
     - !reference [.release-pipeline-job, rules]
   script:
     - ./tools/runner-setup.sh --datadog-ci
+    # check-secrets.sh authenticates Vault with AWS credentials, which a Tart VM gets from the IAM proxy.
+    - eval "$(aws configure export-credentials --format env)"
     - make env-check
 
 # ┌──────────────────────────┐
