@@ -131,6 +131,58 @@ internal struct TypeConversionTests {
         }
     }
 
+    @Test("Date assignment token remains an unusable credential without failing the context")
+    func dateAssignmentTokenDoesNotFailContext() throws {
+        let context = MutableContext(
+            targetingKey: "subject",
+            structure: MutableStructure(attributes: [
+                "dd_assignment_token": .date(Date(timeIntervalSince1970: 1_609_459_200)),
+                "plan": .string("premium"),
+            ])
+        )
+
+        let flagsContext = try FlagsEvaluationContext(context)
+
+        #expect(flagsContext.targetingKey == "subject")
+        #expect(flagsContext.attributes["dd_assignment_token"] == .bool(false))
+        #expect(flagsContext.attributes["plan"] == .string("premium"))
+    }
+
+    @Test("Unusable assignment-token values do not require targeting-value conversion")
+    func unusableAssignmentTokensDoNotFailContext() throws {
+        let date = Value.date(Date(timeIntervalSince1970: 1_609_459_200))
+        let values: [Value] = [
+            .boolean(true), .integer(42), .double(1.5), date,
+            .list([date]), .structure(["nested": date]),
+        ]
+        for value in values {
+            let context = MutableContext(
+                targetingKey: "subject",
+                structure: MutableStructure(attributes: [
+                    "dd_assignment_token": value,
+                    "plan": .string("premium"),
+                ])
+            )
+            let flagsContext = try FlagsEvaluationContext(context)
+            #expect(flagsContext.attributes["dd_assignment_token"] == .bool(false))
+            #expect(flagsContext.attributes["plan"] == .string("premium"))
+        }
+    }
+
+    @Test("String and absent assignment credentials preserve context-update semantics")
+    func assignmentTokenStringsAndRemoval() throws {
+        for token in [Value.string("opaque-token"), .string(""), .null] {
+            let context = MutableContext(
+                targetingKey: "subject",
+                structure: MutableStructure(attributes: ["dd_assignment_token": token])
+            )
+            let flagsContext = try FlagsEvaluationContext(context)
+            let expectedToken = try AnyValue(token)
+            #expect(flagsContext.attributes["dd_assignment_token"] == expectedToken)
+        }
+        #expect(try FlagsEvaluationContext(MutableContext(targetingKey: "subject")).attributes["dd_assignment_token"] == nil)
+    }
+
     @Test("Large numbers and numeric edge cases")
     func contextWithLargeNumbers() async throws {
         let context = MutableContext(

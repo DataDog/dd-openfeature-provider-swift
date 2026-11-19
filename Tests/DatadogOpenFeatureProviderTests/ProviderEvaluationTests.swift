@@ -241,6 +241,35 @@ internal struct ProviderEvaluationMetadataTests {
 
 @Suite("ProviderEvaluation Edge Cases")
 internal struct ProviderEvaluationEdgeCaseTests {
+    @Test("Legacy native evaluation errors preserve existing provider details")
+    func providerEvaluationPreservesLegacyErrors() {
+        for error in [FlagEvaluationError.providerNotReady, .flagNotFound, .typeMismatch] {
+            let boolean = ProviderEvaluation(
+                FlagDetails<Bool>(key: "flag", value: false, reason: "default", error: error)
+            )
+            let string = ProviderEvaluation(FlagDetails<String>(key: "flag", value: "default", error: error))
+            let integer = ProviderEvaluation<Int64>(FlagDetails<Int>(key: "flag", value: 0, error: error))
+            let double = ProviderEvaluation(FlagDetails<Double>(key: "flag", value: 0, error: error))
+            let object = ProviderEvaluation<Value>(FlagDetails<AnyValue>(key: "flag", value: .null, error: error))
+
+            #expect(boolean.value == false)
+            #expect(string.value == "default")
+            #expect(integer.value == 0)
+            #expect(double.value == 0)
+            #expect(object.value == .null)
+            for code in [boolean.errorCode, string.errorCode, integer.errorCode, double.errorCode, object.errorCode] {
+                #expect(code == nil)
+            }
+            #expect(boolean.reason == "default")
+            for reason in [string.reason, integer.reason, double.reason, object.reason] {
+                #expect(reason == nil)
+            }
+            for message in [boolean.errorMessage, string.errorMessage, integer.errorMessage, double.errorMessage, object.errorMessage] {
+                #expect(message == nil)
+            }
+        }
+    }
+
     @Test("Evaluation with nil variant and reason")
     func providerEvaluationWithNilVariantAndReason() async throws {
         let flagDetails = FlagDetails<Bool>(

@@ -1,5 +1,7 @@
 # Unreleased
 
+- [FEATURE] Support subject-authorized assignment downloads through the reserved `dd_assignment_token` evaluation-context attribute and surface subject-authorization evaluation failures as OpenFeature `GENERAL` errors. Existing errors from older native SDKs retain their evaluation details.
+
 # 0.3.0 / 2026-10-08
 
 - [CHANGED] Require Datadog SDK `>= 3.17.0, < 4.0.0` in Swift Package Manager and CocoaPods.

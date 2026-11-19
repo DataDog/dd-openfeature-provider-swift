@@ -171,6 +171,28 @@ internal struct ContextManagementTests {
         try await provider.initialize(initialContext: context)
     }
 
+    @Test("Initialization and context updates pass opaque credentials to the native SDK and support removal")
+    func assignmentTokenContextUpdates() async throws {
+        let mockFlagsClient = DatadogFlagsClientMock()
+        let provider = DatadogProvider(flagsClient: mockFlagsClient)
+        let first = MutableContext(
+            targetingKey: "subject",
+            structure: MutableStructure(attributes: ["dd_assignment_token": .string("first-token")])
+        )
+        try await provider.initialize(initialContext: first)
+        #expect(mockFlagsClient.lastSetContext?.attributes["dd_assignment_token"] == .string("first-token"))
+
+        let replacement = MutableContext(
+            targetingKey: "subject",
+            structure: MutableStructure(attributes: ["dd_assignment_token": .string("replacement-token")])
+        )
+        try await provider.onContextSet(oldContext: first, newContext: replacement)
+        #expect(mockFlagsClient.lastSetContext?.attributes["dd_assignment_token"] == .string("replacement-token"))
+
+        try await provider.onContextSet(oldContext: replacement, newContext: MutableContext(targetingKey: "subject"))
+        #expect(mockFlagsClient.lastSetContext?.attributes["dd_assignment_token"] == nil)
+    }
+
     @Test("Initialize throws when state is error")
     func initializeThrowsWhenError() async throws {
         // Given
