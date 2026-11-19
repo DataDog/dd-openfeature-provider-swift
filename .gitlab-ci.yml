@@ -7,14 +7,16 @@ stages:
 variables:
   MAIN_BRANCH: "main"
   DEVELOP_BRANCH: "develop"
+  # The Tart team image installs Xcode 26.0 as /Applications/Xcode-26.0.0.app, with its default simulator runtimes.
   DEFAULT_XCODE: "26.0.0"
-  DEFAULT_IOS_OS: "26.0"
+  DEFAULT_IOS_OS: "26.0.1"
   DEFAULT_TVOS_OS: "26.0"
+  TART_EXECUTOR_SHELL: "/bin/bash -l"
 
 default:
   tags:
-    - macos:sequoia-arm64
-    - specific:true
+    - macos:tart
+  image: "486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/ci-platform-machine-images/tart-vm:dd-openfeature-provider-swift-sequoia-latest"
 
 # ┌───────────────┐
 # │ Utility jobs: │
@@ -95,21 +97,12 @@ Platform Compatibility:
 
 Latest SDK Compatibility:
   stage: test
-  # Temporary until the Sequoia runner is provisioned and this job succeeds.
-  when: manual
-  allow_failure: true
-  tags:
-    - macos:sequoia-arm64
-    - specific:true
-  variables:
-    # Exercise newer SDK releases separately from the minimum supported SDK.
-    LATEST_SDK_XCODE: "26.0.0"
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
     - !reference [.test-pipeline-job, rules]
     - !reference [.release-pipeline-job, rules]
   script:
-    - ./tools/runner-setup.sh --xcode "$LATEST_SDK_XCODE" --iOS --tvOS --watchOS
+    - ./tools/runner-setup.sh --xcode "$DEFAULT_XCODE" --iOS --tvOS --watchOS
     - make latest-sdk-compatibility
 
 Platform Tests (iOS):
