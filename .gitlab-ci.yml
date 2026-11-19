@@ -14,6 +14,9 @@ variables:
   DEFAULT_IOS_OS: "26.0.1"
   DEFAULT_TVOS_OS: "26.0"
   TART_EXECUTOR_SHELL: "/bin/bash -l"
+  # The Tart VM shell has no UTF-8 locale. CocoaPods and the repo's zsh helpers need one.
+  LANG: "en_US.UTF-8"
+  LC_ALL: "en_US.UTF-8"
   # Prefilled variables for running a pipeline manually:
   # Ref.: https://docs.gitlab.com/ee/ci/pipelines/index.html#prefill-variables-in-manual-pipelines
   RELEASE_GIT_TAG:
